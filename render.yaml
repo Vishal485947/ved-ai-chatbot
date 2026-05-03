@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: ved-ai-chatbot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash-lite
+      - key: MAX_MESSAGES_PER_HOUR
+        value: "20"

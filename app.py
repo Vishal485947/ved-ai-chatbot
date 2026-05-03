@@ -1,18 +1,70 @@
 import os
+import time
+from pathlib import Path
 
-from openai import OpenAI
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
 
-load_dotenv()
 
-app = Flask(__name__)
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+BASE_DIR = Path(__file__).resolve().parent
+ENV_FILE = BASE_DIR / ".env"
+
+load_dotenv(ENV_FILE)
+
+app = Flask(
+    __name__,
+    template_folder=str(BASE_DIR / "templates"),
+    static_folder=str(BASE_DIR / "static"),
+)
 
 SYSTEM_PROMPT = """
 You are Ved, a friendly AI chatbot. Explain things clearly, keep answers useful,
 and ask a short follow-up question when it helps the user.
 """
+
+FALLBACK_GEMINI_MODELS = [
+    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+]
+
+VISITOR_MESSAGE_LOG = {}
+
+
+def visitor_ip():
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.remote_addr or "unknown"
+
+
+def rate_limit_exceeded():
+    max_messages = int(os.getenv("MAX_MESSAGES_PER_HOUR", "20"))
+    now = time.time()
+    one_hour_ago = now - 3600
+    ip_address = visitor_ip()
+    recent_messages = [
+        timestamp
+        for timestamp in VISITOR_MESSAGE_LOG.get(ip_address, [])
+        if timestamp > one_hour_ago
+    ]
+
+    if len(recent_messages) >= max_messages:
+        VISITOR_MESSAGE_LOG[ip_address] = recent_messages
+        return True
+
+    recent_messages.append(now)
+    VISITOR_MESSAGE_LOG[ip_address] = recent_messages
+    return False
+
+
+@app.after_request
+def add_no_cache_headers(response):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 @app.get("/")
@@ -20,8 +72,26 @@ def home():
     return render_template("index.html")
 
 
+@app.get("/ved")
+def ved_home():
+    return render_template("index.html")
+
+
+@app.get("/healthz")
+def healthz():
+    return jsonify({"status": "ok", "app": "Ved"})
+
+
 @app.post("/chat")
 def chat():
+    load_dotenv(ENV_FILE, override=True)
+    api_key = (os.getenv("GEMINI_API_KEY") or "").strip()
+
+    if not api_key or api_key == "your_gemini_api_key_here":
+        return jsonify({
+            "error": f"Ved needs a Gemini API key. Add GEMINI_API_KEY=your_key_here to {ENV_FILE}, then send a new message."
+        }), 500
+
     data = request.get_json(silent=True) or {}
     user_message = (data.get("message") or "").strip()
     history = data.get("history") or []
@@ -29,26 +99,86 @@ def chat():
     if not user_message:
         return jsonify({"error": "Please type a message."}), 400
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    if rate_limit_exceeded():
+        return jsonify({
+            "error": "Ved is getting a lot of messages from this visitor. Please wait before sending more."
+        }), 429
+
+    conversation = []
 
     for item in history[-10:]:
         role = item.get("role")
         content = item.get("content")
         if role in {"user", "assistant"} and content:
-            messages.append({"role": role, "content": content})
+            speaker = "User" if role == "user" else "Ved"
+            conversation.append(f"{speaker}: {content}")
 
-    messages.append({"role": "user", "content": user_message})
+    conversation.append(f"User: {user_message}")
 
     try:
-        response = client.chat.completions.create(
-            model=os.getenv("OPENAI_MODEL", "gpt-5.5"),
-            messages=messages,
-        )
-        answer = response.choices[0].message.content
+        try:
+            from google import genai
+            from google.genai import types
+        except ModuleNotFoundError:
+            return jsonify({
+                "error": "The Gemini Python package is missing. Run pip install -r requirements.txt, then restart the server."
+            }), 500
+
+        client = genai.Client(api_key=api_key)
+        preferred_model = (os.getenv("GEMINI_MODEL") or "").strip()
+        model_candidates = [
+            model for model in [preferred_model, *FALLBACK_GEMINI_MODELS] if model
+        ]
+        model_candidates = list(dict.fromkeys(model_candidates))
+
+        last_error = None
+        not_found_models = []
+
+        for model in model_candidates:
+            try:
+                response = client.models.generate_content(
+                    model=model,
+                    contents="\n".join(conversation),
+                    config=types.GenerateContentConfig(system_instruction=SYSTEM_PROMPT),
+                )
+                break
+            except Exception as exc:
+                error_text = str(exc).lower()
+                last_error = exc
+                if "not_found" in error_text or "not found" in error_text or "404" in error_text:
+                    not_found_models.append(model)
+                    continue
+                raise
+        else:
+            tried = ", ".join(not_found_models or model_candidates)
+            return jsonify({
+                "error": f"None of these Gemini models were available for your API key: {tried}. Open Google AI Studio, check the model list for your project, and put one supported text model in GEMINI_MODEL."
+            }), 404
+
+        answer = (response.text or "").strip()
+        if not answer:
+            answer = "I could not generate a reply for that. Please try asking another way."
         return jsonify({"reply": answer})
     except Exception as exc:
+        error_text = str(exc).lower()
+        if "api key" in error_text or "unauthenticated" in error_text:
+            return jsonify({
+                "error": "The Gemini API key is not valid. Check that GEMINI_API_KEY in your .env file is copied correctly."
+            }), 401
+
+        if "quota" in error_text or "429" in error_text:
+            return jsonify({
+                "error": "Your Gemini API key works, but Gemini returned a quota or rate-limit error. Wait a minute and try again, or check Usage & Billing in Google AI Studio."
+            }), 429
+
+        if "not_found" in error_text or "not found" in error_text or "404" in error_text:
+            return jsonify({
+                "error": "The Gemini model name is not available. In your .env file, use GEMINI_MODEL=gemini-2.0-flash or GEMINI_MODEL=gemini-2.0-flash-lite."
+            }), 404
+
         return jsonify({"error": f"Ved could not reply right now: {exc}"}), 500
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.getenv("PORT", "5000"))
+    app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
