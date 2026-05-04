@@ -11,3 +11,9 @@ services:
         value: gemini-2.5-flash-lite
       - key: MAX_MESSAGES_PER_HOUR
         value: "20"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false

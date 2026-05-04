@@ -37,6 +37,9 @@ pip install -r requirements.txt
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL=gemini-2.5-flash-lite
+SECRET_KEY=replace_with_a_long_random_secret
+GOOGLE_CLIENT_ID=your_google_oauth_client_id
+GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
 ```
 
 7. Run the app:
@@ -80,9 +83,29 @@ Start Command: gunicorn app:app
 GEMINI_API_KEY=your_real_gemini_api_key_here
 GEMINI_MODEL=gemini-2.5-flash-lite
 MAX_MESSAGES_PER_HOUR=20
+SECRET_KEY=use_a_long_random_secret
+GOOGLE_CLIENT_ID=your_google_oauth_client_id
+GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
 ```
 
 6. Deploy the service.
+
+### Google Login Setup
+
+Create a Google OAuth web client in Google Cloud Console. Add these authorized
+redirect URIs:
+
+```text
+http://127.0.0.1:5000/auth/google/callback
+https://your-render-url.onrender.com/auth/google/callback
+```
+
+Put the OAuth client ID and client secret into Render as environment variables:
+
+```env
+GOOGLE_CLIENT_ID=your_google_oauth_client_id
+GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
+```
 
 Render will give you a public URL like:
 

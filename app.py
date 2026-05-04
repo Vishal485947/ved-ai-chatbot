@@ -2,8 +2,11 @@ import os
 import time
 from pathlib import Path
 
+from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request
+from flask import jsonify, redirect, render_template, request, session, url_for
+from flask import Flask
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -15,6 +18,17 @@ app = Flask(
     __name__,
     template_folder=str(BASE_DIR / "templates"),
     static_folder=str(BASE_DIR / "static"),
+)
+app.secret_key = os.getenv("SECRET_KEY", "dev-only-change-me")
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+oauth = OAuth(app)
+oauth.register(
+    name="google",
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
 )
 
 SYSTEM_PROMPT = """
@@ -69,12 +83,12 @@ def add_no_cache_headers(response):
 
 @app.get("/")
 def home():
-    return render_template("index.html")
+    return render_template("index.html", user=session.get("user"))
 
 
 @app.get("/ved")
 def ved_home():
-    return render_template("index.html")
+    return render_template("index.html", user=session.get("user"))
 
 
 @app.get("/healthz")
@@ -82,8 +96,47 @@ def healthz():
     return jsonify({"status": "ok", "app": "Ved"})
 
 
+@app.get("/login")
+def login():
+    if not os.getenv("GOOGLE_CLIENT_ID") or not os.getenv("GOOGLE_CLIENT_SECRET"):
+        return render_template(
+            "index.html",
+            user=None,
+            auth_error="Google login is not configured yet. Add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and SECRET_KEY in your hosting environment.",
+        )
+
+    redirect_uri = url_for("google_callback", _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
+
+@app.get("/auth/google/callback")
+def google_callback():
+    token = oauth.google.authorize_access_token()
+    user_info = token.get("userinfo")
+    if not user_info:
+        user_info = oauth.google.userinfo(token=token)
+
+    session["user"] = {
+        "name": user_info.get("name") or "there",
+        "email": user_info.get("email"),
+        "picture": user_info.get("picture"),
+    }
+    return redirect(url_for("home"))
+
+
+@app.get("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("home"))
+
+
 @app.post("/chat")
 def chat():
+    if not session.get("user"):
+        return jsonify({
+            "error": "Please log in with Google before chatting with Ved."
+        }), 401
+
     load_dotenv(ENV_FILE, override=True)
     api_key = (os.getenv("GEMINI_API_KEY") or "").strip()
 
