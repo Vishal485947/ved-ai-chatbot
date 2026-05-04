@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ved AI Chatbot</title>
+  <meta name="ved-ui-version" content="professional-login-v2" />
+  <link rel="icon" href="{{ url_for('static', filename='ved-logo.svg') }}" type="image/svg+xml" />
   <style>
     * {
       box-sizing: border-box;
@@ -48,6 +50,30 @@
     .brand {
       padding: 24px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .ved-logo {
+      width: 48px;
+      height: 48px;
+      flex: 0 0 auto;
+      filter: drop-shadow(0 10px 18px rgba(35, 88, 230, 0.22));
+    }
+
+    .ved-logo.small {
+      width: 38px;
+      height: 38px;
+    }
+
+    .ved-logo.mini {
+      width: 28px;
+      height: 28px;
+      filter: none;
     }
 
     .eyebrow {
@@ -387,22 +413,10 @@
     .login-mark {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       margin-bottom: 34px;
       color: var(--muted);
       font-weight: 700;
-    }
-
-    .ved-icon {
-      width: 42px;
-      height: 42px;
-      display: grid;
-      place-items: center;
-      border-radius: 8px;
-      background: var(--nav);
-      color: #ffffff;
-      font-size: 24px;
-      font-weight: 800;
     }
 
     .login-card h1 {
@@ -525,6 +539,9 @@
     }
 
     .preview-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
       margin: 0;
       font-weight: 800;
     }
@@ -635,7 +652,21 @@
       <section class="login-stage" aria-label="Ved sign in">
         <div class="login-card">
           <div class="login-mark">
-            <span class="ved-icon">V</span>
+            <svg class="ved-logo" viewBox="0 0 96 96" role="img" aria-label="Ved logo">
+              <path fill="url(#vedLogoGradientLogin)" d="M14 18c0-5.5 4.5-10 10-10h48c5.5 0 10 4.5 10 10v39.6c0 5.5-4.5 10-10 10H50.4L32.8 84.3c-2.8 2.7-7.5.7-7.5-3.2V67.6H24c-5.5 0-10-4.5-10-10V18Z"></path>
+              <path fill="#fff" d="M30.3 25.5h10.4l8.5 25.1 8.6-25.1h10.1L54.4 61.8H43.8L30.3 25.5Z"></path>
+              <path fill="url(#vedAccentGradientLogin)" d="M66.2 23.8a6 6 0 1 1 0 12.1 6 6 0 0 1 0-12.1ZM74.1 41.3a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 0 1 0-8.4Z"></path>
+              <defs>
+                <linearGradient id="vedLogoGradientLogin" x1="14" x2="82" y1="10" y2="86" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stop-color="#2358e6"></stop>
+                  <stop offset="1" stop-color="#101826"></stop>
+                </linearGradient>
+                <linearGradient id="vedAccentGradientLogin" x1="28" x2="72" y1="20" y2="76" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stop-color="#8fd3ff"></stop>
+                  <stop offset="1" stop-color="#34a853"></stop>
+                </linearGradient>
+              </defs>
+            </svg>
             <span>Ved AI Assistant</span>
           </div>
 
@@ -665,7 +696,13 @@
         <aside class="preview-panel" aria-label="Ved preview">
           <div class="preview-shell">
             <div class="preview-top">
-              <p class="preview-title">Ved</p>
+              <p class="preview-title">
+                <svg class="ved-logo mini" viewBox="0 0 96 96" aria-hidden="true">
+                  <path fill="#2358e6" d="M14 18c0-5.5 4.5-10 10-10h48c5.5 0 10 4.5 10 10v39.6c0 5.5-4.5 10-10 10H50.4L32.8 84.3c-2.8 2.7-7.5.7-7.5-3.2V67.6H24c-5.5 0-10-4.5-10-10V18Z"></path>
+                  <path fill="#fff" d="M30.3 25.5h10.4l8.5 25.1 8.6-25.1h10.1L54.4 61.8H43.8L30.3 25.5Z"></path>
+                </svg>
+                Ved
+              </p>
               <span class="preview-status">Online</span>
             </div>
             <div class="preview-messages">
@@ -690,8 +727,23 @@
     <div class="app">
       <aside class="sidebar">
         <section class="brand">
-          <p class="eyebrow">AI Assistant</p>
-          <h1>Ved</h1>
+          <div class="brand-lockup">
+            <svg class="ved-logo small" viewBox="0 0 96 96" role="img" aria-label="Ved logo">
+              <path fill="url(#vedLogoGradientSidebar)" d="M14 18c0-5.5 4.5-10 10-10h48c5.5 0 10 4.5 10 10v39.6c0 5.5-4.5 10-10 10H50.4L32.8 84.3c-2.8 2.7-7.5.7-7.5-3.2V67.6H24c-5.5 0-10-4.5-10-10V18Z"></path>
+              <path fill="#fff" d="M30.3 25.5h10.4l8.5 25.1 8.6-25.1h10.1L54.4 61.8H43.8L30.3 25.5Z"></path>
+              <path fill="#8fd3ff" d="M66.2 23.8a6 6 0 1 1 0 12.1 6 6 0 0 1 0-12.1Z"></path>
+              <defs>
+                <linearGradient id="vedLogoGradientSidebar" x1="14" x2="82" y1="10" y2="86" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stop-color="#2358e6"></stop>
+                  <stop offset="1" stop-color="#101826"></stop>
+                </linearGradient>
+              </defs>
+            </svg>
+            <div>
+              <p class="eyebrow">AI Assistant</p>
+              <h1>Ved</h1>
+            </div>
+          </div>
         </section>
 
         <button id="newChatButton" class="new-chat" type="button">New Conversation</button>
