@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ved AI Chatbot</title>
-  <meta name="ved-ui-version" content="professional-login-v2" />
+  <meta name="ved-ui-version" content="voice-input-v1" />
   <link rel="icon" href="{{ url_for('static', filename='ved-logo.svg') }}" type="image/svg+xml" />
   <style>
     * {
@@ -340,7 +340,7 @@
 
     .composer {
       display: grid;
-      grid-template-columns: 1fr auto;
+      grid-template-columns: auto 1fr auto;
       gap: 12px;
       padding: 18px 28px;
       background: var(--panel);
@@ -364,16 +364,64 @@
       min-height: 48px;
       border: 0;
       border-radius: 8px;
-      padding: 0 22px;
-      background: var(--brand);
-      color: #ffffff;
       font-size: 16px;
       font-weight: 700;
       cursor: pointer;
     }
 
-    .composer button:hover {
+    .send-button {
+      padding: 0 22px;
+      background: var(--brand);
+      color: #ffffff;
+    }
+
+    .send-button:hover {
       background: var(--brand-dark);
+    }
+
+    .voice-button {
+      width: 48px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      border: 1px solid #c9d3df;
+      background: #ffffff;
+      color: var(--brand);
+    }
+
+    .voice-button:hover {
+      border-color: var(--brand);
+      background: #f8fbff;
+    }
+
+    .voice-button.listening {
+      border-color: #ea4335;
+      background: #fff2f2;
+      color: #d93025;
+    }
+
+    .voice-button svg {
+      width: 21px;
+      height: 21px;
+    }
+
+    .voice-status {
+      grid-column: 1 / -1;
+      min-height: 18px;
+      margin: -4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .voice-tag {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.18);
+      color: inherit;
+      font-size: 12px;
+      font-weight: 700;
     }
 
     .composer button:disabled,
@@ -640,8 +688,12 @@
       }
 
       .composer {
-        grid-template-columns: 1fr;
+        grid-template-columns: auto 1fr;
         padding: 14px;
+      }
+
+      .send-button {
+        grid-column: 1 / -1;
       }
     }
   </style>
@@ -780,6 +832,17 @@
         <section id="chatMessages" class="messages" aria-live="polite"></section>
 
         <form id="chatForm" class="composer">
+          <button
+            id="voiceButton"
+            class="voice-button"
+            type="button"
+            aria-label="Send a voice message"
+            title="Send a voice message"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Zm5-3a1 1 0 1 0-2 0 3 3 0 0 1-6 0 1 1 0 1 0-2 0 5 5 0 0 0 4 4.9V18H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.1a5 5 0 0 0 4-4.9Z"></path>
+            </svg>
+          </button>
           <input
             id="messageInput"
             type="text"
@@ -788,7 +851,8 @@
             aria-label="Message Ved"
             required
           />
-          <button type="submit">Send</button>
+          <button class="send-button" type="submit">Send</button>
+          <p id="voiceStatus" class="voice-status" aria-live="polite"></p>
         </form>
       </main>
     </div>
@@ -803,14 +867,22 @@
       const chatMessages = document.querySelector("#chatMessages");
       const conversationList = document.querySelector("#conversationList");
       const newChatButton = document.querySelector("#newChatButton");
+      const voiceButton = document.querySelector("#voiceButton");
+      const voiceStatus = document.querySelector("#voiceStatus");
       const storageKey = `ved_conversations_${currentUser.email}`;
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
       let conversations = loadConversations();
       let activeId = conversations[0]?.id || createConversation().id;
+      let recognition = null;
+      let isListening = false;
+      let recognizedVoiceText = "";
+      let submitNextAsVoice = false;
 
       renderConversationList();
       renderMessages();
+      setupVoiceInput();
 
       newChatButton.addEventListener("click", () => {
         const conversation = createConversation();
@@ -827,8 +899,15 @@
         const text = messageInput.value.trim();
         if (!text) return;
 
+        const isVoiceMessage = submitNextAsVoice;
+        submitNextAsVoice = false;
+
         const conversation = activeConversation();
-        conversation.messages.push({ role: "user", content: text });
+        conversation.messages.push({
+          role: "user",
+          content: text,
+          inputType: isVoiceMessage ? "voice" : "text",
+        });
         conversation.updatedAt = new Date().toISOString();
         if (conversation.title === "New conversation") {
           conversation.title = text.slice(0, 44);
@@ -879,9 +958,16 @@
             sources: data.sources || [],
             searchHtml: data.searchHtml || "",
           });
+
+          if (isVoiceMessage) {
+            speakReply(data.reply);
+          }
         } catch (error) {
           conversation.messages = conversation.messages.filter((message) => message !== loading);
           conversation.messages.push({ role: "assistant", content: error.message });
+          if (isVoiceMessage) {
+            speakReply(error.message);
+          }
         } finally {
           conversation.updatedAt = new Date().toISOString();
           saveConversations();
@@ -892,6 +978,102 @@
           messageInput.focus();
         }
       });
+
+      function setupVoiceInput() {
+        if (!SpeechRecognition) {
+          voiceButton.disabled = true;
+          voiceButton.title = "Voice input is not supported in this browser.";
+          setVoiceStatus("Voice input is not supported in this browser.");
+          return;
+        }
+
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = navigator.language || "en-US";
+
+        recognition.addEventListener("start", () => {
+          isListening = true;
+          recognizedVoiceText = "";
+          voiceButton.classList.add("listening");
+          setVoiceStatus("Listening...");
+        });
+
+        recognition.addEventListener("result", (event) => {
+          let interimText = "";
+
+          for (let index = event.resultIndex; index < event.results.length; index += 1) {
+            const transcript = event.results[index][0].transcript;
+            if (event.results[index].isFinal) {
+              recognizedVoiceText += transcript;
+            } else {
+              interimText += transcript;
+            }
+          }
+
+          const fullText = `${recognizedVoiceText} ${interimText}`.trim();
+          messageInput.value = fullText;
+          if (fullText) {
+            setVoiceStatus(`Heard: ${fullText}`);
+          }
+        });
+
+        recognition.addEventListener("end", () => {
+          isListening = false;
+          voiceButton.classList.remove("listening");
+          const finalText = recognizedVoiceText.trim() || messageInput.value.trim();
+
+          if (finalText) {
+            messageInput.value = finalText;
+            submitNextAsVoice = true;
+            setVoiceStatus("Voice message captured. Sending...");
+            chatForm.requestSubmit();
+          } else {
+            setVoiceStatus("No speech was captured. Try again.");
+          }
+        });
+
+        recognition.addEventListener("error", (event) => {
+          isListening = false;
+          voiceButton.classList.remove("listening");
+          setVoiceStatus(`Voice input stopped: ${event.error}`);
+        });
+
+        voiceButton.addEventListener("click", () => {
+          if (isListening) {
+            recognition.stop();
+            return;
+          }
+
+          window.speechSynthesis?.cancel();
+          recognizedVoiceText = "";
+          messageInput.value = "";
+          recognition.start();
+        });
+      }
+
+      function setVoiceStatus(message) {
+        voiceStatus.textContent = message || "";
+      }
+
+      function speakReply(text) {
+        if (!("speechSynthesis" in window)) {
+          setVoiceStatus("Speech output is not supported in this browser.");
+          return;
+        }
+
+        const cleanText = String(text || "").replace(/\s+/g, " ").trim();
+        if (!cleanText) return;
+
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = navigator.language || "en-US";
+        utterance.rate = 1;
+        utterance.pitch = 1;
+
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+        setVoiceStatus("Ved is speaking the reply.");
+      }
 
       function loadConversations() {
         try {
@@ -973,6 +1155,13 @@
           text.className = "message-text";
           text.textContent = message.content;
           bubble.appendChild(text);
+
+          if (message.role === "user" && message.inputType === "voice") {
+            const tag = document.createElement("span");
+            tag.className = "voice-tag";
+            tag.textContent = "Voice message";
+            bubble.appendChild(tag);
+          }
 
           if (message.role === "assistant" && Array.isArray(message.sources) && message.sources.length) {
             const sources = document.createElement("section");

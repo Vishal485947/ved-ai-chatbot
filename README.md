@@ -1,6 +1,8 @@
 # Ved AI Chatbot
 
 Ved is a simple AI chatbot web app built with Python, Flask, HTML, CSS, and JavaScript.
+It supports Google login, saved browser-side conversations, real-time search grounding,
+voice input, and spoken replies for voice messages.
 
 ## Files
 
@@ -60,6 +62,9 @@ http://127.0.0.1:5000
 The webpage collects your message and sends it to `/chat`. The Python server receives
 the message, adds Ved's personality prompt, asks the AI model for a reply, and sends
 the reply back to the page.
+
+Voice input uses the browser's speech recognition APIs. Spoken replies use the
+browser's speech synthesis APIs. These features work best in Chrome and Edge.
 
 ## Make Ved 24/7 Live
 
