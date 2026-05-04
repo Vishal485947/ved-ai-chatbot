@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ved AI Chatbot</title>
-  <meta name="ved-ui-version" content="voice-input-v1" />
+  <meta name="ved-ui-version" content="voice-input-v2" />
   <link rel="icon" href="{{ url_for('static', filename='ved-logo.svg') }}" type="image/svg+xml" />
   <style>
     * {
@@ -380,10 +380,12 @@
     }
 
     .voice-button {
-      width: 48px;
-      padding: 0;
-      display: grid;
-      place-items: center;
+      min-width: 112px;
+      padding: 0 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
       border: 1px solid #c9d3df;
       background: #ffffff;
       color: var(--brand);
@@ -403,6 +405,10 @@
     .voice-button svg {
       width: 21px;
       height: 21px;
+    }
+
+    .voice-label {
+      font-size: 15px;
     }
 
     .voice-status {
@@ -692,6 +698,14 @@
         padding: 14px;
       }
 
+      .voice-button {
+        min-width: 48px;
+      }
+
+      .voice-label {
+        display: none;
+      }
+
       .send-button {
         grid-column: 1 / -1;
       }
@@ -842,6 +856,7 @@
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Zm5-3a1 1 0 1 0-2 0 3 3 0 0 1-6 0 1 1 0 1 0-2 0 5 5 0 0 0 4 4.9V18H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.1a5 5 0 0 0 4-4.9Z"></path>
             </svg>
+            <span class="voice-label">Voice</span>
           </button>
           <input
             id="messageInput"
@@ -879,6 +894,8 @@
       let isListening = false;
       let recognizedVoiceText = "";
       let submitNextAsVoice = false;
+      let shouldAutoSendVoice = false;
+      let silenceTimer = null;
 
       renderConversationList();
       renderMessages();
@@ -988,15 +1005,18 @@
         }
 
         recognition = new SpeechRecognition();
-        recognition.continuous = false;
+        recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = navigator.language || "en-US";
 
         recognition.addEventListener("start", () => {
           isListening = true;
           recognizedVoiceText = "";
+          shouldAutoSendVoice = true;
+          clearTimeout(silenceTimer);
           voiceButton.classList.add("listening");
-          setVoiceStatus("Listening...");
+          voiceButton.querySelector(".voice-label").textContent = "Listening";
+          setVoiceStatus("Listening... speak clearly, then pause.");
         });
 
         recognition.addEventListener("result", (event) => {
@@ -1015,38 +1035,59 @@
           messageInput.value = fullText;
           if (fullText) {
             setVoiceStatus(`Heard: ${fullText}`);
+            clearTimeout(silenceTimer);
+            silenceTimer = setTimeout(() => {
+              if (isListening) {
+                recognition.stop();
+              }
+            }, 1300);
           }
         });
 
         recognition.addEventListener("end", () => {
           isListening = false;
           voiceButton.classList.remove("listening");
+          voiceButton.querySelector(".voice-label").textContent = "Voice";
+          clearTimeout(silenceTimer);
           const finalText = recognizedVoiceText.trim() || messageInput.value.trim();
 
-          if (finalText) {
+          if (finalText && shouldAutoSendVoice) {
             messageInput.value = finalText;
             submitNextAsVoice = true;
             setVoiceStatus("Voice message captured. Sending...");
             chatForm.requestSubmit();
           } else {
-            setVoiceStatus("No speech was captured. Try again.");
+            setVoiceStatus("No speech was captured. Check microphone permission and try again.");
           }
+          shouldAutoSendVoice = false;
         });
 
         recognition.addEventListener("error", (event) => {
           isListening = false;
           voiceButton.classList.remove("listening");
-          setVoiceStatus(`Voice input stopped: ${event.error}`);
+          voiceButton.querySelector(".voice-label").textContent = "Voice";
+          clearTimeout(silenceTimer);
+          shouldAutoSendVoice = false;
+
+          if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+            setVoiceStatus("Microphone permission is blocked. Allow microphone access in your browser.");
+          } else if (event.error === "no-speech") {
+            setVoiceStatus("No speech was heard. Click Voice and speak after the listening message appears.");
+          } else {
+            setVoiceStatus(`Voice input stopped: ${event.error}`);
+          }
         });
 
         voiceButton.addEventListener("click", () => {
           if (isListening) {
+            shouldAutoSendVoice = true;
             recognition.stop();
             return;
           }
 
           window.speechSynthesis?.cancel();
           recognizedVoiceText = "";
+          shouldAutoSendVoice = true;
           messageInput.value = "";
           recognition.start();
         });
