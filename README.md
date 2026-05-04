@@ -40,7 +40,9 @@ pip install -r requirements.txt
 GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL=gemini-2.5-flash-lite
 ENABLE_REAL_TIME_SEARCH=true
+SMART_REAL_TIME_SEARCH=true
 MAX_MESSAGES_PER_HOUR=20
+MAX_OUTPUT_TOKENS=700
 PROMPT_RECENT_MESSAGES=8
 PROMPT_SUMMARY_CHARS=1600
 PROMPT_MESSAGE_CHARS=700
@@ -71,6 +73,11 @@ To reduce token usage, Ved sends only the most recent messages exactly and compr
 older chat context into a short summary before calling Gemini. You can tune this with
 `PROMPT_RECENT_MESSAGES`, `PROMPT_SUMMARY_CHARS`, and `PROMPT_MESSAGE_CHARS`.
 
+Ved also keeps real-time search smart. With `ENABLE_REAL_TIME_SEARCH=true` and
+`SMART_REAL_TIME_SEARCH=true`, Gemini Search grounding is used only for questions
+that look current, live, or time-sensitive. Shorter replies are encouraged by the
+system prompt and capped with `MAX_OUTPUT_TOKENS`.
+
 Voice input uses the browser's speech recognition APIs. Spoken replies use the
 browser's speech synthesis APIs. These features work best in Chrome and Edge.
 
@@ -97,7 +104,9 @@ Start Command: gunicorn app:app
 GEMINI_API_KEY=your_real_gemini_api_key_here
 GEMINI_MODEL=gemini-2.5-flash-lite
 ENABLE_REAL_TIME_SEARCH=true
+SMART_REAL_TIME_SEARCH=true
 MAX_MESSAGES_PER_HOUR=20
+MAX_OUTPUT_TOKENS=700
 PROMPT_RECENT_MESSAGES=8
 PROMPT_SUMMARY_CHARS=1600
 PROMPT_MESSAGE_CHARS=700
@@ -107,8 +116,9 @@ GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
 ```
 
 `ENABLE_REAL_TIME_SEARCH=true` lets Ved use Gemini Grounding with Google Search
-for current information and source links. Search grounding can affect API usage
-or billing depending on your Gemini plan.
+for current information and source links. `SMART_REAL_TIME_SEARCH=true` saves quota
+by using search only for live or time-sensitive questions. Search grounding can
+affect API usage or billing depending on your Gemini plan.
 
 6. Deploy the service.
 

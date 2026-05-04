@@ -36,6 +36,8 @@ oauth.register(
 SYSTEM_PROMPT = """
 You are Ved, a friendly AI chatbot. Explain things clearly, keep answers useful,
 and ask a short follow-up question when it helps the user.
+Keep replies concise by default: use 3-6 short sentences or a few clear bullets.
+Give longer step-by-step detail only when the user asks for it.
 If the user asks who created you, who made you, who your creator is, or any
 similar question, answer exactly: My creator is Vishal Raj,a student of class X B  SPSTDSC
 Older conversation context may be summarized to save tokens. Use the summary for
@@ -83,6 +85,70 @@ def rate_limit_exceeded():
 def real_time_search_enabled():
     value = os.getenv("ENABLE_REAL_TIME_SEARCH", "true").strip().lower()
     return value in {"1", "true", "yes", "on"}
+
+
+def smart_real_time_search_enabled():
+    value = os.getenv("SMART_REAL_TIME_SEARCH", "true").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
+def needs_real_time_search(message):
+    normalized = f" {message.lower()} "
+    current_year = str(datetime.now().year)
+    search_triggers = [
+        "latest",
+        "current",
+        "currently",
+        "right now",
+        "today",
+        "todays",
+        "tomorrow",
+        "yesterday",
+        "this week",
+        "this month",
+        "this year",
+        "now",
+        "recent",
+        "recently",
+        "new",
+        "news",
+        "live",
+        "update",
+        "updates",
+        "weather",
+        "temperature",
+        "forecast",
+        "score",
+        "match",
+        "fixture",
+        "standings",
+        "price",
+        "stock",
+        "share price",
+        "crypto",
+        "bitcoin",
+        "exchange rate",
+        "gold rate",
+        "release date",
+        "available now",
+        "near me",
+        "search web",
+        "search google",
+        "look up",
+    ]
+
+    if current_year in normalized:
+        return True
+
+    return any(trigger in normalized for trigger in search_triggers)
+
+
+def should_use_real_time_search(message):
+    if not real_time_search_enabled():
+        return False
+    if not smart_real_time_search_enabled():
+        return True
+    return needs_real_time_search(message)
 
 
 def env_int(name, default, minimum, maximum):
@@ -224,9 +290,10 @@ Current date and time for the user: {user_now.strftime("%A, %B %d, %Y at %H:%M")
 Current UTC date and time: {utc_now.strftime("%A, %B %d, %Y at %H:%M")} (UTC).
 
 If the user asks for today's date or current time, use the current date/time above.
-For current events, recent facts, news, prices, sports, releases, or anything likely
-to have changed recently, use Google Search grounding when available. Do not say your
-knowledge cutoff. Do not prefix replies with "Ved:".
+For normal questions, answer directly without needing live search. For current events,
+recent facts, news, prices, sports, releases, or anything likely to have changed
+recently, use Google Search grounding when available. Do not say your knowledge
+cutoff. Do not prefix replies with "Ved:".
 """
 
 
@@ -364,9 +431,10 @@ def chat():
         for model in model_candidates:
             try:
                 config_options = {
-                    "system_instruction": build_system_prompt(timezone_name)
+                    "system_instruction": build_system_prompt(timezone_name),
+                    "max_output_tokens": env_int("MAX_OUTPUT_TOKENS", 700, 120, 2000),
                 }
-                if real_time_search_enabled():
+                if should_use_real_time_search(user_message):
                     config_options["tools"] = [
                         types.Tool(google_search=types.GoogleSearch())
                     ]
