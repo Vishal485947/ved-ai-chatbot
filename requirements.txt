@@ -1,0 +1,5 @@
+authlib
+flask
+google-genai
+gunicorn
+python-dotenv

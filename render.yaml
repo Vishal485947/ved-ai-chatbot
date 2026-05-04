@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: ved-ai-chatbot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash-lite
+      - key: ENABLE_REAL_TIME_SEARCH
+        value: "true"
+      - key: SMART_REAL_TIME_SEARCH
+        value: "true"
+      - key: MAX_MESSAGES_PER_HOUR
+        value: "20"
+      - key: MAX_OUTPUT_TOKENS
+        value: "700"
+      - key: PROMPT_RECENT_MESSAGES
+        value: "8"
+      - key: PROMPT_SUMMARY_CHARS
+        value: "1600"
+      - key: PROMPT_MESSAGE_CHARS
+        value: "700"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
