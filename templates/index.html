@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ved AI Chatbot</title>
-  <meta name="ved-ui-version" content="voice-input-v2" />
+  <meta name="ved-ui-version" content="puter-fallback-v1" />
   <link rel="icon" href="{{ url_for('static', filename='ved-logo.svg') }}" type="image/svg+xml" />
   <style>
     * {
@@ -336,6 +336,13 @@
 
     .search-suggestions {
       margin-top: 12px;
+    }
+
+    .fallback-note {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
     }
 
     .composer {
@@ -873,6 +880,7 @@
     </div>
   {% endif %}
 
+  <script src="https://js.puter.com/v2/"></script>
   <script>
     const currentUser = {{ (user or {}) | tojson }};
 
@@ -974,12 +982,31 @@
               error: "Ved received an unexpected server response. Please wait for the latest deployment to finish, then try again.",
             };
           }
-          conversation.messages = conversation.messages.filter((message) => message !== loading);
 
           if (!response.ok) {
+            if (shouldUseBackupAi(response.status, data.error)) {
+              loading.content = "Gemini is busy. Trying backup AI...";
+              renderMessages();
+
+              const backupReply = await getBackupReply(text, priorMessages);
+              conversation.messages = conversation.messages.filter((message) => message !== loading);
+              conversation.messages.push({
+                role: "assistant",
+                content: backupReply,
+                fallback: true,
+              });
+
+              if (isVoiceMessage) {
+                speakReply(backupReply);
+              }
+              return;
+            }
+
+            conversation.messages = conversation.messages.filter((message) => message !== loading);
             throw new Error(data.error || "Ved could not reply right now.");
           }
 
+          conversation.messages = conversation.messages.filter((message) => message !== loading);
           conversation.messages.push({
             role: "assistant",
             content: data.reply,
@@ -1127,6 +1154,102 @@
         setVoiceStatus("Ved is speaking the reply.");
       }
 
+      function shouldUseBackupAi(status, errorMessage) {
+        const text = String(errorMessage || "").toLowerCase();
+        const isAppLimit = text.includes("getting a lot of messages from this visitor");
+        const isGeminiLimit =
+          text.includes("gemini") &&
+          (text.includes("quota") || text.includes("rate-limit") || text.includes("rate limit"));
+
+        return !isAppLimit && status === 429 && isGeminiLimit;
+      }
+
+      function normalizePuterReply(response) {
+        if (typeof response === "string") {
+          return response.trim();
+        }
+
+        const messageContent = response?.message?.content;
+        if (typeof messageContent === "string") {
+          return messageContent.trim();
+        }
+
+        if (Array.isArray(messageContent)) {
+          return messageContent
+            .map((part) => part?.text || part?.content || "")
+            .join(" ")
+            .trim();
+        }
+
+        if (typeof response?.text === "string") {
+          return response.text.trim();
+        }
+
+        if (typeof response?.content === "string") {
+          return response.content.trim();
+        }
+
+        return String(response || "").trim();
+      }
+
+      function buildBackupMessages(userText, priorMessages) {
+        const localNow = new Date().toLocaleString([], {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const recentMessages = priorMessages
+          .slice(-6)
+          .map((message) => ({
+            role: message.role,
+            content: compactForPrompt(message.content, promptMessageLimit),
+          }))
+          .filter((message) => ["user", "assistant"].includes(message.role) && message.content);
+
+        return [
+          {
+            role: "system",
+            content:
+              `You are Ved, a friendly AI chatbot. Keep replies concise: 3-6 short sentences or a few bullets. ` +
+              `If the user asks who created you, answer exactly: My creator is Vishal Raj,a student of class X B  SPSTDSC. ` +
+              `Current user date/time: ${localNow} (${userTimezone}). ` +
+              `You are Ved's backup AI because Gemini is temporarily rate-limited. Do not mention that unless needed. ` +
+              `You do not have Ved's Google Search grounding. For latest/live/current information, say live search is busy and ask the user to try again in a minute.`,
+          },
+          ...recentMessages,
+          {
+            role: "user",
+            content: compactForPrompt(userText, promptMessageLimit),
+          },
+        ];
+      }
+
+      async function getBackupReply(userText, priorMessages) {
+        if (!window.puter?.ai?.chat) {
+          throw new Error("Gemini is rate-limited, and the backup AI is still loading. Refresh the page and try again.");
+        }
+
+        try {
+          const response = await window.puter.ai.chat(
+            buildBackupMessages(userText, priorMessages),
+            {
+              max_tokens: 700,
+              temperature: 0.4,
+            }
+          );
+          const reply = normalizePuterReply(response);
+          if (!reply) {
+            throw new Error("empty backup response");
+          }
+          return reply;
+        } catch (error) {
+          throw new Error(`Gemini is rate-limited, and backup AI could not reply: ${error?.message || error}`);
+        }
+      }
+
       function compactForPrompt(value, maxLength) {
         const text = String(value || "").replace(/\s+/g, " ").trim();
         if (text.length <= maxLength) {
@@ -1264,6 +1387,13 @@
 
             sources.append(title, sourceList);
             bubble.appendChild(sources);
+          }
+
+          if (message.role === "assistant" && message.fallback) {
+            const fallbackNote = document.createElement("div");
+            fallbackNote.className = "fallback-note";
+            fallbackNote.textContent = "Backup AI used because Gemini was rate-limited.";
+            bubble.appendChild(fallbackNote);
           }
 
           if (message.role === "assistant" && message.searchHtml) {

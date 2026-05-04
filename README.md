@@ -2,7 +2,8 @@
 
 Ved is a simple AI chatbot web app built with Python, Flask, HTML, CSS, and JavaScript.
 It supports Google login, saved browser-side conversations, real-time search grounding,
-voice input, and spoken replies for voice messages.
+voice input, spoken replies for voice messages, and a browser-side Puter.js backup
+AI if Gemini is temporarily rate-limited.
 
 ## Files
 
@@ -77,6 +78,9 @@ Ved also keeps real-time search smart. With `ENABLE_REAL_TIME_SEARCH=true` and
 `SMART_REAL_TIME_SEARCH=true`, Gemini Search grounding is used only for questions
 that look current, live, or time-sensitive. Shorter replies are encouraged by the
 system prompt and capped with `MAX_OUTPUT_TOKENS`.
+
+If Gemini returns a quota or rate-limit error, the browser tries Puter.js as a
+backup AI for normal answers. Gemini remains the primary model for real-time search.
 
 Voice input uses the browser's speech recognition APIs. Spoken replies use the
 browser's speech synthesis APIs. These features work best in Chrome and Edge.
