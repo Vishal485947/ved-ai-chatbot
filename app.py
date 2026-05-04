@@ -160,6 +160,21 @@ knowledge cutoff. Do not prefix replies with "Ved:".
 """
 
 
+def asks_about_creator(message):
+    normalized = message.lower()
+    creator_phrases = [
+        "who is your creator",
+        "who created you",
+        "who made you",
+        "who is your developer",
+        "who developed you",
+        "who built you",
+        "your creator",
+        "your maker",
+    ]
+    return any(phrase in normalized for phrase in creator_phrases)
+
+
 @app.after_request
 def add_no_cache_headers(response):
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
@@ -239,6 +254,13 @@ def chat():
 
     if not user_message:
         return jsonify({"error": "Please type a message."}), 400
+
+    if asks_about_creator(user_message):
+        return jsonify({
+            "reply": "My creator is Vishal Raj,a student of class X B  SPSTDSC",
+            "sources": [],
+            "searchHtml": "",
+        })
 
     if rate_limit_exceeded():
         return jsonify({

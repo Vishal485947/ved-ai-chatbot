@@ -574,7 +574,15 @@
             body: JSON.stringify({ message: text, history, timezone: userTimezone }),
           });
 
-          const data = await response.json();
+          const responseText = await response.text();
+          let data = {};
+          try {
+            data = JSON.parse(responseText);
+          } catch {
+            data = {
+              error: "Ved received an unexpected server response. Please wait for the latest deployment to finish, then try again.",
+            };
+          }
           conversation.messages = conversation.messages.filter((message) => message !== loading);
 
           if (!response.ok) {
