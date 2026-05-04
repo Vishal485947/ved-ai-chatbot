@@ -1313,8 +1313,10 @@
             options.tools = [{ type: "web_search" }];
           }
 
+          const backupMessages = buildBackupMessages(userText, priorMessages, useWebSearch);
           const response = await window.puter.ai.chat(
-            buildBackupMessages(userText, priorMessages, useWebSearch),
+            backupMessages,
+            false,
             options
           );
           const reply = normalizePuterReply(response);
