@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ved AI Chatbot</title>
-  <meta name="ved-ui-version" content="puter-fallback-v1" />
+  <meta name="ved-ui-version" content="puter-web-search-fallback-v1" />
   <link rel="icon" href="{{ url_for('static', filename='ved-logo.svg') }}" type="image/svg+xml" />
   <style>
     * {
@@ -336,13 +336,6 @@
 
     .search-suggestions {
       margin-top: 12px;
-    }
-
-    .fallback-note {
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
     }
 
     .composer {
@@ -898,6 +891,8 @@
       const promptRecentMessageCount = 8;
       const promptSummaryLimit = 1600;
       const promptMessageLimit = 700;
+      const backupTextModel = "gpt-5-nano";
+      const backupWebSearchModel = "openai/gpt-5.2-chat";
 
       let conversations = loadConversations();
       let activeId = conversations[0]?.id || createConversation().id;
@@ -985,7 +980,7 @@
 
           if (!response.ok) {
             if (shouldUseBackupAi(response.status, data.error)) {
-              loading.content = "Gemini is busy. Trying backup AI...";
+              loading.content = "Ved is checking...";
               renderMessages();
 
               const backupReply = await getBackupReply(text, priorMessages);
@@ -993,7 +988,6 @@
               conversation.messages.push({
                 role: "assistant",
                 content: backupReply,
-                fallback: true,
               });
 
               if (isVoiceMessage) {
@@ -1164,6 +1158,54 @@
         return !isAppLimit && status === 429 && isGeminiLimit;
       }
 
+      function needsBackupWebSearch(message) {
+        const normalized = ` ${String(message || "").toLowerCase()} `;
+        const currentYear = String(new Date().getFullYear());
+        const searchTriggers = [
+          "latest",
+          "current",
+          "currently",
+          "right now",
+          "today",
+          "todays",
+          "tomorrow",
+          "yesterday",
+          "this week",
+          "this month",
+          "this year",
+          "now",
+          "recent",
+          "recently",
+          "new",
+          "news",
+          "live",
+          "update",
+          "updates",
+          "weather",
+          "temperature",
+          "forecast",
+          "score",
+          "match",
+          "fixture",
+          "standings",
+          "price",
+          "stock",
+          "share price",
+          "crypto",
+          "bitcoin",
+          "exchange rate",
+          "gold rate",
+          "release date",
+          "available now",
+          "near me",
+          "search web",
+          "search google",
+          "look up",
+        ];
+
+        return normalized.includes(currentYear) || searchTriggers.some((trigger) => normalized.includes(trigger));
+      }
+
       function normalizePuterReply(response) {
         if (typeof response === "string") {
           return response.trim();
@@ -1192,7 +1234,7 @@
         return String(response || "").trim();
       }
 
-      function buildBackupMessages(userText, priorMessages) {
+      function buildBackupMessages(userText, priorMessages, useWebSearch) {
         const localNow = new Date().toLocaleString([], {
           weekday: "long",
           year: "numeric",
@@ -1216,8 +1258,10 @@
               `You are Ved, a friendly AI chatbot. Keep replies concise: 3-6 short sentences or a few bullets. ` +
               `If the user asks who created you, answer exactly: My creator is Vishal Raj,a student of class X B  SPSTDSC. ` +
               `Current user date/time: ${localNow} (${userTimezone}). ` +
-              `You are Ved's backup AI because Gemini is temporarily rate-limited. Do not mention that unless needed. ` +
-              `You do not have Ved's Google Search grounding. For latest/live/current information, say live search is busy and ask the user to try again in a minute.`,
+              `Do not mention backup systems, rate limits, Gemini, or Puter. ` +
+              (useWebSearch
+                ? `Use web search for current or live information. Include source names or links when available.`
+                : `Answer directly without claiming to have searched the web.`),
           },
           ...recentMessages,
           {
@@ -1233,12 +1277,20 @@
         }
 
         try {
+          const useWebSearch = needsBackupWebSearch(userText);
+          const options = {
+            max_tokens: 700,
+            temperature: 0.4,
+            model: useWebSearch ? backupWebSearchModel : backupTextModel,
+          };
+
+          if (useWebSearch) {
+            options.tools = [{ type: "web_search" }];
+          }
+
           const response = await window.puter.ai.chat(
-            buildBackupMessages(userText, priorMessages),
-            {
-              max_tokens: 700,
-              temperature: 0.4,
-            }
+            buildBackupMessages(userText, priorMessages, useWebSearch),
+            options
           );
           const reply = normalizePuterReply(response);
           if (!reply) {
@@ -1387,13 +1439,6 @@
 
             sources.append(title, sourceList);
             bubble.appendChild(sources);
-          }
-
-          if (message.role === "assistant" && message.fallback) {
-            const fallbackNote = document.createElement("div");
-            fallbackNote.className = "fallback-note";
-            fallbackNote.textContent = "Backup AI used because Gemini was rate-limited.";
-            bubble.appendChild(fallbackNote);
           }
 
           if (message.role === "assistant" && message.searchHtml) {

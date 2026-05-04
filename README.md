@@ -80,7 +80,8 @@ that look current, live, or time-sensitive. Shorter replies are encouraged by th
 system prompt and capped with `MAX_OUTPUT_TOKENS`.
 
 If Gemini returns a quota or rate-limit error, the browser tries Puter.js as a
-backup AI for normal answers. Gemini remains the primary model for real-time search.
+backup AI. For live or current questions, the fallback uses Puter web search instead
+of showing a "try again later" message. Gemini remains the primary model.
 
 Voice input uses the browser's speech recognition APIs. Spoken replies use the
 browser's speech synthesis APIs. These features work best in Chrome and Edge.
