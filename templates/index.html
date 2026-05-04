@@ -1296,37 +1296,72 @@
         ];
       }
 
+      function buildBackupPrompt(userText, priorMessages, useWebSearch) {
+        const lines = buildBackupMessages(userText, priorMessages, useWebSearch).map((message) => {
+          const speaker = message.role === "system" ? "Instructions" : message.role === "user" ? "User" : "Ved";
+          return `${speaker}: ${message.content}`;
+        });
+        return lines.join("\n\n");
+      }
+
+      async function tryPuterReply(input, options, useMessageArray) {
+        const response = useMessageArray
+          ? await window.puter.ai.chat(input, false, options)
+          : await window.puter.ai.chat(input, options);
+        return normalizePuterReply(response);
+      }
+
       async function getBackupReply(userText, priorMessages) {
         if (!window.puter?.ai?.chat) {
-          throw new Error("Gemini is busy, and the backup AI is still loading. Refresh the page and try again.");
+          throw new Error("Ved is still loading the backup AI. Refresh the page and try again.");
         }
 
-        try {
-          const useWebSearch = needsBackupWebSearch(userText);
-          const options = {
-            max_tokens: 700,
-            temperature: 0.4,
-            model: useWebSearch ? backupWebSearchModel : backupTextModel,
-          };
+        const useWebSearch = needsBackupWebSearch(userText);
+        const options = {
+          max_tokens: 700,
+          temperature: 0.4,
+          model: useWebSearch ? backupWebSearchModel : backupTextModel,
+        };
 
-          if (useWebSearch) {
-            options.tools = [{ type: "web_search" }];
-          }
-
-          const backupMessages = buildBackupMessages(userText, priorMessages, useWebSearch);
-          const response = await window.puter.ai.chat(
-            backupMessages,
-            false,
-            options
-          );
-          const reply = normalizePuterReply(response);
-          if (!reply) {
-            throw new Error("empty backup response");
-          }
-          return reply;
-        } catch (error) {
-          throw new Error(`Gemini is busy, and backup AI could not reply: ${error?.message || error}`);
+        if (useWebSearch) {
+          options.tools = [{ type: "web_search" }];
         }
+
+        const fallbackAttempts = [
+          {
+            input: buildBackupMessages(userText, priorMessages, useWebSearch),
+            options,
+            useMessageArray: true,
+          },
+          {
+            input: buildBackupPrompt(userText, priorMessages, useWebSearch),
+            options,
+            useMessageArray: false,
+          },
+          {
+            input: buildBackupPrompt(userText, priorMessages, false),
+            options: { max_tokens: 700, temperature: 0.4, model: backupTextModel },
+            useMessageArray: false,
+          },
+          {
+            input: buildBackupPrompt(userText, priorMessages, false),
+            options: { max_tokens: 700, temperature: 0.4 },
+            useMessageArray: false,
+          },
+        ];
+
+        for (const attempt of fallbackAttempts) {
+          try {
+            const reply = await tryPuterReply(attempt.input, attempt.options, attempt.useMessageArray);
+            if (reply) {
+              return reply;
+            }
+          } catch {
+            continue;
+          }
+        }
+
+        throw new Error("Ved is having trouble reaching AI right now. Please try again in a minute.");
       }
 
       function compactForPrompt(value, maxLength) {

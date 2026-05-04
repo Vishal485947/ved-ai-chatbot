@@ -312,6 +312,21 @@ def asks_about_creator(message):
     return any(phrase in normalized for phrase in creator_phrases)
 
 
+def quick_local_reply(message, user_name):
+    normalized = "".join(
+        character.lower() if character.isalnum() or character.isspace() else " "
+        for character in message
+    )
+    words = [word for word in normalized.split() if word not in {"ved", "assistant"}]
+    greeting_words = {"hi", "hello", "hey", "hii", "helo", "namaste"}
+
+    if words and len(words) <= 3 and all(word in greeting_words for word in words):
+        name = (user_name or "there").split()[0]
+        return f"Hi {name}! I am here. What would you like help with today?"
+
+    return ""
+
+
 def is_gemini_unavailable_error(error_text):
     return (
         "503" in error_text
@@ -407,6 +422,14 @@ def chat():
     if asks_about_creator(user_message):
         return jsonify({
             "reply": "My creator is Vishal Raj,a student of class X B  SPSTDSC",
+            "sources": [],
+            "searchHtml": "",
+        })
+
+    local_reply = quick_local_reply(user_message, session.get("user", {}).get("name"))
+    if local_reply:
+        return jsonify({
+            "reply": local_reply,
             "sources": [],
             "searchHtml": "",
         })
