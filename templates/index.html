@@ -520,6 +520,7 @@
       const conversationList = document.querySelector("#conversationList");
       const newChatButton = document.querySelector("#newChatButton");
       const storageKey = `ved_conversations_${currentUser.email}`;
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
       let conversations = loadConversations();
       let activeId = conversations[0]?.id || createConversation().id;
@@ -570,7 +571,7 @@
           const response = await fetch("/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: text, history }),
+            body: JSON.stringify({ message: text, history, timezone: userTimezone }),
           });
 
           const data = await response.json();

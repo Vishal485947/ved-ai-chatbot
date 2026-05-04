@@ -1,6 +1,8 @@
 import os
 import time
+from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
@@ -128,6 +130,34 @@ def extract_grounding(response):
     return {"sources": sources, "searchHtml": search_html}
 
 
+def user_timezone(timezone_name):
+    if not timezone_name or not isinstance(timezone_name, str) or len(timezone_name) > 80:
+        timezone_name = "UTC"
+
+    try:
+        return timezone_name, ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError:
+        return "UTC", timezone.utc
+
+
+def build_system_prompt(timezone_name):
+    timezone_label, tzinfo = user_timezone(timezone_name)
+    user_now = datetime.now(tzinfo)
+    utc_now = datetime.now(timezone.utc)
+
+    return f"""
+{SYSTEM_PROMPT.strip()}
+
+Current date and time for the user: {user_now.strftime("%A, %B %d, %Y at %H:%M")} ({timezone_label}).
+Current UTC date and time: {utc_now.strftime("%A, %B %d, %Y at %H:%M")} (UTC).
+
+If the user asks for today's date or current time, use the current date/time above.
+For current events, recent facts, news, prices, sports, releases, or anything likely
+to have changed recently, use Google Search grounding when available. Do not say your
+knowledge cutoff. Do not prefix replies with "Ved:".
+"""
+
+
 @app.after_request
 def add_no_cache_headers(response):
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
@@ -203,6 +233,7 @@ def chat():
     data = request.get_json(silent=True) or {}
     user_message = (data.get("message") or "").strip()
     history = data.get("history") or []
+    timezone_name = data.get("timezone") or "UTC"
 
     if not user_message:
         return jsonify({"error": "Please type a message."}), 400
@@ -244,7 +275,9 @@ def chat():
 
         for model in model_candidates:
             try:
-                config_options = {"system_instruction": SYSTEM_PROMPT}
+                config_options = {
+                    "system_instruction": build_system_prompt(timezone_name)
+                }
                 if real_time_search_enabled():
                     config_options["tools"] = [
                         types.Tool(google_search=types.GoogleSearch())
