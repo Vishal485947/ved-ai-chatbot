@@ -1000,22 +1000,28 @@
             throw new Error(data.error || "Ved could not reply right now.");
           }
 
+          const reply = cleanAssistantText(data?.reply);
+          if (!reply) {
+            throw new Error(cleanAssistantText(data?.error) || "Ved received an empty reply. Please try again.");
+          }
+
           conversation.messages = conversation.messages.filter((message) => message !== loading);
           conversation.messages.push({
             role: "assistant",
-            content: data.reply,
+            content: reply,
             sources: data.sources || [],
             searchHtml: data.searchHtml || "",
           });
 
           if (isVoiceMessage) {
-            speakReply(data.reply);
+            speakReply(reply);
           }
         } catch (error) {
+          const errorText = cleanAssistantText(error?.message) || "Ved could not reply right now. Please try again.";
           conversation.messages = conversation.messages.filter((message) => message !== loading);
-          conversation.messages.push({ role: "assistant", content: error.message });
+          conversation.messages.push({ role: "assistant", content: errorText });
           if (isVoiceMessage) {
-            speakReply(error.message);
+            speakReply(errorText);
           }
         } finally {
           conversation.updatedAt = new Date().toISOString();
@@ -1212,31 +1218,45 @@
       }
 
       function normalizePuterReply(response) {
-        if (typeof response === "string") {
-          return response.trim();
+        return cleanAssistantText(response);
+      }
+
+      function cleanAssistantText(value) {
+        if (typeof value === "string") {
+          const text = value.trim();
+          const normalized = text.toLowerCase();
+          if (!text || normalized === "undefined" || normalized === "null" || normalized === "[object object]") {
+            return "";
+          }
+          return text;
         }
 
-        const messageContent = response?.message?.content;
-        if (typeof messageContent === "string") {
-          return messageContent.trim();
+        if (Array.isArray(value)) {
+          return value.map(cleanAssistantText).filter(Boolean).join(" ").trim();
         }
 
-        if (Array.isArray(messageContent)) {
-          return messageContent
-            .map((part) => part?.text || part?.content || "")
-            .join(" ")
-            .trim();
+        if (value && typeof value === "object") {
+          const candidates = [
+            value.reply,
+            value.text,
+            value.content,
+            value.output_text,
+            value.answer,
+            value.result,
+            value.response,
+            value.message?.content,
+            value.choices?.[0]?.message?.content,
+          ];
+
+          for (const candidate of candidates) {
+            const text = cleanAssistantText(candidate);
+            if (text) {
+              return text;
+            }
+          }
         }
 
-        if (typeof response?.text === "string") {
-          return response.text.trim();
-        }
-
-        if (typeof response?.content === "string") {
-          return response.content.trim();
-        }
-
-        return String(response || "").trim();
+        return "";
       }
 
       function buildBackupMessages(userText, priorMessages, useWebSearch) {
@@ -1411,7 +1431,10 @@
 
           const text = document.createElement("div");
           text.className = "message-text";
-          text.textContent = message.content;
+          text.textContent =
+            message.role === "assistant"
+              ? cleanAssistantText(message.content) || "Ved could not show that reply. Please send the message again."
+              : String(message.content ?? "");
           bubble.appendChild(text);
 
           if (message.role === "user" && message.inputType === "voice") {
