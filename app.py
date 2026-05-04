@@ -73,6 +73,61 @@ def rate_limit_exceeded():
     return False
 
 
+def real_time_search_enabled():
+    value = os.getenv("ENABLE_REAL_TIME_SEARCH", "true").strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
+def object_to_dict(value):
+    if isinstance(value, dict):
+        return value
+    if hasattr(value, "model_dump"):
+        return value.model_dump()
+    return {}
+
+
+def extract_grounding(response):
+    sources = []
+    seen_sources = set()
+    search_html = ""
+
+    for candidate in getattr(response, "candidates", []) or []:
+        metadata = (
+            getattr(candidate, "grounding_metadata", None)
+            or getattr(candidate, "groundingMetadata", None)
+        )
+        metadata = object_to_dict(metadata)
+
+        entry_point = (
+            metadata.get("search_entry_point")
+            or metadata.get("searchEntryPoint")
+            or {}
+        )
+        search_html = (
+            entry_point.get("rendered_content")
+            or entry_point.get("renderedContent")
+            or search_html
+        )
+
+        chunks = metadata.get("grounding_chunks") or metadata.get("groundingChunks") or []
+        for chunk in chunks:
+            web = object_to_dict(chunk).get("web") or {}
+            uri = web.get("uri")
+            if not uri or uri in seen_sources:
+                continue
+
+            sources.append({
+                "title": web.get("title") or uri,
+                "uri": uri,
+            })
+            seen_sources.add(uri)
+
+            if len(sources) >= 5:
+                break
+
+    return {"sources": sources, "searchHtml": search_html}
+
+
 @app.after_request
 def add_no_cache_headers(response):
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
@@ -189,10 +244,16 @@ def chat():
 
         for model in model_candidates:
             try:
+                config_options = {"system_instruction": SYSTEM_PROMPT}
+                if real_time_search_enabled():
+                    config_options["tools"] = [
+                        types.Tool(google_search=types.GoogleSearch())
+                    ]
+
                 response = client.models.generate_content(
                     model=model,
                     contents="\n".join(conversation),
-                    config=types.GenerateContentConfig(system_instruction=SYSTEM_PROMPT),
+                    config=types.GenerateContentConfig(**config_options),
                 )
                 break
             except Exception as exc:
@@ -211,7 +272,7 @@ def chat():
         answer = (response.text or "").strip()
         if not answer:
             answer = "I could not generate a reply for that. Please try asking another way."
-        return jsonify({"reply": answer})
+        return jsonify({"reply": answer, **extract_grounding(response)})
     except Exception as exc:
         error_text = str(exc).lower()
         if "api key" in error_text or "unauthenticated" in error_text:

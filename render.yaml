@@ -9,6 +9,8 @@ services:
         sync: false
       - key: GEMINI_MODEL
         value: gemini-2.5-flash-lite
+      - key: ENABLE_REAL_TIME_SEARCH
+        value: "true"
       - key: MAX_MESSAGES_PER_HOUR
         value: "20"
       - key: SECRET_KEY

@@ -37,6 +37,7 @@ pip install -r requirements.txt
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL=gemini-2.5-flash-lite
+ENABLE_REAL_TIME_SEARCH=true
 SECRET_KEY=replace_with_a_long_random_secret
 GOOGLE_CLIENT_ID=your_google_oauth_client_id
 GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
@@ -82,11 +83,16 @@ Start Command: gunicorn app:app
 ```env
 GEMINI_API_KEY=your_real_gemini_api_key_here
 GEMINI_MODEL=gemini-2.5-flash-lite
+ENABLE_REAL_TIME_SEARCH=true
 MAX_MESSAGES_PER_HOUR=20
 SECRET_KEY=use_a_long_random_secret
 GOOGLE_CLIENT_ID=your_google_oauth_client_id
 GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
 ```
+
+`ENABLE_REAL_TIME_SEARCH=true` lets Ved use Gemini Grounding with Google Search
+for current information and source links. Search grounding can affect API usage
+or billing depending on your Gemini plan.
 
 6. Deploy the service.
 
