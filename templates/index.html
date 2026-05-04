@@ -887,6 +887,9 @@
       const storageKey = `ved_conversations_${currentUser.email}`;
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const promptRecentMessageCount = 8;
+      const promptSummaryLimit = 1600;
+      const promptMessageLimit = 700;
 
       let conversations = loadConversations();
       let activeId = conversations[0]?.id || createConversation().id;
@@ -944,14 +947,22 @@
         renderMessages();
 
         try {
-          const history = conversation.messages
-            .filter((message) => message !== loading)
-            .slice(-12);
+          const messagesForPrompt = conversation.messages.filter((message) => message !== loading);
+          const priorMessages = messagesForPrompt.slice(0, -1);
+          const history = priorMessages.slice(-promptRecentMessageCount);
+          const contextSummary = summarizeHistoryForPrompt(
+            priorMessages.slice(0, -promptRecentMessageCount)
+          );
 
           const response = await fetch("/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: text, history, timezone: userTimezone }),
+            body: JSON.stringify({
+              message: text,
+              history,
+              contextSummary,
+              timezone: userTimezone,
+            }),
           });
 
           const responseText = await response.text();
@@ -1114,6 +1125,32 @@
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(utterance);
         setVoiceStatus("Ved is speaking the reply.");
+      }
+
+      function compactForPrompt(value, maxLength) {
+        const text = String(value || "").replace(/\s+/g, " ").trim();
+        if (text.length <= maxLength) {
+          return text;
+        }
+        return `${text.slice(0, maxLength - 3).trim()}...`;
+      }
+
+      function promptLine(message) {
+        if (!message || !["user", "assistant"].includes(message.role) || !message.content) {
+          return "";
+        }
+
+        const speaker = message.role === "user" ? "User" : "Ved";
+        return `${speaker}: ${compactForPrompt(message.content, promptMessageLimit)}`;
+      }
+
+      function summarizeHistoryForPrompt(messages) {
+        const lines = messages
+          .map(promptLine)
+          .filter(Boolean)
+          .map((line) => `- ${line}`);
+
+        return compactForPrompt(lines.join("\n"), promptSummaryLimit);
       }
 
       function loadConversations() {

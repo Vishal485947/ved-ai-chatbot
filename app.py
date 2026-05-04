@@ -38,6 +38,9 @@ You are Ved, a friendly AI chatbot. Explain things clearly, keep answers useful,
 and ask a short follow-up question when it helps the user.
 If the user asks who created you, who made you, who your creator is, or any
 similar question, answer exactly: My creator is Vishal Raj,a student of class X B  SPSTDSC
+Older conversation context may be summarized to save tokens. Use the summary for
+continuity, but rely on recent messages for exact wording and ask a clarifying
+question if important details are missing.
 """
 
 FALLBACK_GEMINI_MODELS = [
@@ -80,6 +83,73 @@ def rate_limit_exceeded():
 def real_time_search_enabled():
     value = os.getenv("ENABLE_REAL_TIME_SEARCH", "true").strip().lower()
     return value in {"1", "true", "yes", "on"}
+
+
+def env_int(name, default, minimum, maximum):
+    try:
+        value = int(os.getenv(name, str(default)))
+    except ValueError:
+        value = default
+
+    return max(minimum, min(maximum, value))
+
+
+def compact_text(value, max_chars):
+    text = " ".join(str(value or "").split())
+    if len(text) <= max_chars:
+        return text
+    return text[: max_chars - 3].rstrip() + "..."
+
+
+def format_history_line(item, message_limit):
+    if not isinstance(item, dict):
+        return ""
+
+    role = item.get("role")
+    content = compact_text(item.get("content"), message_limit)
+    if role not in {"user", "assistant"} or not content:
+        return ""
+
+    speaker = "User" if role == "user" else "Ved"
+    return f"{speaker}: {content}"
+
+
+def summarize_history_items(history, summary_limit, message_limit):
+    lines = []
+    for item in history:
+        line = format_history_line(item, message_limit)
+        if line:
+            lines.append(f"- {line}")
+
+    return compact_text("\n".join(lines), summary_limit)
+
+
+def build_conversation_context(history, user_message, context_summary):
+    recent_count = env_int("PROMPT_RECENT_MESSAGES", 8, 2, 20)
+    summary_limit = env_int("PROMPT_SUMMARY_CHARS", 1600, 300, 5000)
+    message_limit = env_int("PROMPT_MESSAGE_CHARS", 700, 120, 2000)
+
+    older_history = history[:-recent_count]
+    recent_history = history[-recent_count:]
+    summary = compact_text(context_summary, summary_limit)
+
+    if not summary and older_history:
+        summary = summarize_history_items(older_history, summary_limit, message_limit)
+
+    context = []
+    if summary:
+        context.append(f"Earlier conversation summary:\n{summary}")
+
+    recent_lines = [
+        line
+        for line in (format_history_line(item, message_limit) for item in recent_history)
+        if line
+    ]
+    if recent_lines:
+        context.append("Recent conversation:\n" + "\n".join(recent_lines))
+
+    context.append(f"User: {compact_text(user_message, message_limit)}")
+    return context
 
 
 def object_to_dict(value):
@@ -250,7 +320,10 @@ def chat():
     data = request.get_json(silent=True) or {}
     user_message = (data.get("message") or "").strip()
     history = data.get("history") or []
+    context_summary = data.get("contextSummary") or ""
     timezone_name = data.get("timezone") or "UTC"
+    if not isinstance(history, list):
+        history = []
 
     if not user_message:
         return jsonify({"error": "Please type a message."}), 400
@@ -267,16 +340,7 @@ def chat():
             "error": "Ved is getting a lot of messages from this visitor. Please wait before sending more."
         }), 429
 
-    conversation = []
-
-    for item in history[-10:]:
-        role = item.get("role")
-        content = item.get("content")
-        if role in {"user", "assistant"} and content:
-            speaker = "User" if role == "user" else "Ved"
-            conversation.append(f"{speaker}: {content}")
-
-    conversation.append(f"User: {user_message}")
+    conversation = build_conversation_context(history, user_message, context_summary)
 
     try:
         try:

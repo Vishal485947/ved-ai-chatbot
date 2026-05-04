@@ -40,6 +40,10 @@ pip install -r requirements.txt
 GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL=gemini-2.5-flash-lite
 ENABLE_REAL_TIME_SEARCH=true
+MAX_MESSAGES_PER_HOUR=20
+PROMPT_RECENT_MESSAGES=8
+PROMPT_SUMMARY_CHARS=1600
+PROMPT_MESSAGE_CHARS=700
 SECRET_KEY=replace_with_a_long_random_secret
 GOOGLE_CLIENT_ID=your_google_oauth_client_id
 GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
@@ -62,6 +66,10 @@ http://127.0.0.1:5000
 The webpage collects your message and sends it to `/chat`. The Python server receives
 the message, adds Ved's personality prompt, asks the AI model for a reply, and sends
 the reply back to the page.
+
+To reduce token usage, Ved sends only the most recent messages exactly and compresses
+older chat context into a short summary before calling Gemini. You can tune this with
+`PROMPT_RECENT_MESSAGES`, `PROMPT_SUMMARY_CHARS`, and `PROMPT_MESSAGE_CHARS`.
 
 Voice input uses the browser's speech recognition APIs. Spoken replies use the
 browser's speech synthesis APIs. These features work best in Chrome and Edge.
@@ -90,6 +98,9 @@ GEMINI_API_KEY=your_real_gemini_api_key_here
 GEMINI_MODEL=gemini-2.5-flash-lite
 ENABLE_REAL_TIME_SEARCH=true
 MAX_MESSAGES_PER_HOUR=20
+PROMPT_RECENT_MESSAGES=8
+PROMPT_SUMMARY_CHARS=1600
+PROMPT_MESSAGE_CHARS=700
 SECRET_KEY=use_a_long_random_secret
 GOOGLE_CLIENT_ID=your_google_oauth_client_id
 GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret

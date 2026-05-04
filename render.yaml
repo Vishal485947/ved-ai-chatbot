@@ -13,6 +13,12 @@ services:
         value: "true"
       - key: MAX_MESSAGES_PER_HOUR
         value: "20"
+      - key: PROMPT_RECENT_MESSAGES
+        value: "8"
+      - key: PROMPT_SUMMARY_CHARS
+        value: "1600"
+      - key: PROMPT_MESSAGE_CHARS
+        value: "700"
       - key: SECRET_KEY
         generateValue: true
       - key: GOOGLE_CLIENT_ID
