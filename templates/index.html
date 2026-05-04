@@ -334,8 +334,7 @@
       border-color: var(--brand);
     }
 
-    .composer button,
-    .login-card a {
+    .composer button {
       min-height: 48px;
       border: 0;
       border-radius: 8px;
@@ -347,8 +346,7 @@
       cursor: pointer;
     }
 
-    .composer button:hover,
-    .login-card a:hover {
+    .composer button:hover {
       background: var(--brand-dark);
     }
 
@@ -362,34 +360,115 @@
       min-height: 100vh;
       display: grid;
       place-items: center;
-      padding: 24px;
-      background: #eaf0f6;
+      padding: 40px 24px;
+      background:
+        radial-gradient(circle at 22% 20%, rgba(66, 133, 244, 0.18), transparent 30%),
+        radial-gradient(circle at 78% 12%, rgba(52, 168, 83, 0.14), transparent 28%),
+        linear-gradient(135deg, #eef5fb 0%, #f8fbff 48%, #edf3f8 100%);
     }
 
-    .login-card {
-      width: min(460px, 100%);
-      padding: 32px;
+    .login-stage {
+      width: min(1060px, 100%);
+      display: grid;
+      grid-template-columns: 1fr 0.9fr;
+      gap: 0;
       border: 1px solid var(--line);
       border-radius: 8px;
       background: #ffffff;
-      box-shadow: 0 18px 45px rgba(16, 24, 38, 0.12);
+      overflow: hidden;
+      box-shadow: 0 24px 70px rgba(16, 24, 38, 0.16);
+    }
+
+    .login-card {
+      padding: 44px;
+      background: #ffffff;
+    }
+
+    .login-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 34px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .ved-icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: var(--nav);
+      color: #ffffff;
+      font-size: 24px;
+      font-weight: 800;
     }
 
     .login-card h1 {
-      margin: 0 0 10px;
-      font-size: 36px;
+      margin: 0 0 14px;
+      font-size: 46px;
+      line-height: 1.05;
+      letter-spacing: 0;
     }
 
-    .login-card p {
+    .login-copy {
+      max-width: 480px;
+      margin-bottom: 28px;
       color: var(--muted);
+      font-size: 17px;
       line-height: 1.5;
     }
 
-    .login-card a {
+    .google-button {
       display: inline-flex;
       align-items: center;
+      gap: 12px;
       justify-content: center;
+      min-height: 52px;
+      padding: 0 20px;
+      border: 1px solid #cfd8e3;
+      border-radius: 8px;
+      background: #ffffff;
+      color: var(--ink);
+      font-size: 16px;
+      font-weight: 700;
       text-decoration: none;
+      box-shadow: 0 8px 18px rgba(16, 24, 38, 0.08);
+    }
+
+    .google-button:hover {
+      border-color: #aeb9c8;
+      background: #f8fbff;
+    }
+
+    .google-logo {
+      width: 23px;
+      height: 23px;
+      position: relative;
+      display: inline-block;
+      border-radius: 50%;
+      background:
+        conic-gradient(#4285f4 0 25%, #34a853 0 50%, #fbbc05 0 75%, #ea4335 0);
+    }
+
+    .google-logo::before {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      border-radius: 50%;
+      background: #ffffff;
+    }
+
+    .google-logo::after {
+      content: "";
+      position: absolute;
+      right: 1px;
+      top: 9px;
+      width: 11px;
+      height: 5px;
+      background: #4285f4;
+      border-radius: 1px;
     }
 
     .auth-error {
@@ -401,9 +480,105 @@
       color: #9d2020;
     }
 
+    .login-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .login-badge {
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      background: #f8fbff;
+    }
+
+    .preview-panel {
+      min-height: 520px;
+      padding: 38px;
+      display: grid;
+      align-content: center;
+      background:
+        linear-gradient(180deg, rgba(16, 24, 38, 0.94), rgba(20, 32, 48, 0.98));
+      color: #ffffff;
+    }
+
+    .preview-shell {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.06);
+      box-shadow: 0 22px 45px rgba(0, 0, 0, 0.2);
+    }
+
+    .preview-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .preview-title {
+      margin: 0;
+      font-weight: 800;
+    }
+
+    .preview-status {
+      color: #8de8b1;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .preview-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 18px;
+    }
+
+    .preview-message {
+      max-width: 88%;
+      padding: 12px 13px;
+      border-radius: 8px;
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .preview-message.assistant-preview {
+      background: #ffffff;
+      color: var(--ink);
+    }
+
+    .preview-message.user-preview {
+      align-self: flex-end;
+      background: var(--brand);
+      color: #ffffff;
+    }
+
+    .preview-footnote {
+      margin: 18px 0 0;
+      color: #b8c5d8;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
     @media (max-width: 860px) {
       .app {
         grid-template-columns: 1fr;
+      }
+
+      .login-stage {
+        grid-template-columns: 1fr;
+      }
+
+      .preview-panel {
+        min-height: auto;
       }
 
       .sidebar {
@@ -420,6 +595,19 @@
     }
 
     @media (max-width: 560px) {
+      .login-wrap {
+        padding: 18px;
+      }
+
+      .login-card,
+      .preview-panel {
+        padding: 26px;
+      }
+
+      .login-card h1 {
+        font-size: 36px;
+      }
+
       .topbar {
         align-items: flex-start;
         flex-direction: column;
@@ -444,14 +632,58 @@
 <body>
   {% if not user %}
     <main class="login-wrap">
-      <section class="login-card">
-        <p class="eyebrow">AI Assistant</p>
-        <h1>Ved</h1>
-        <p>Sign in with Google to continue.</p>
-        {% if auth_error %}
-          <div class="auth-error">{{ auth_error }}</div>
-        {% endif %}
-        <a href="{{ url_for('login') }}">Continue with Google</a>
+      <section class="login-stage" aria-label="Ved sign in">
+        <div class="login-card">
+          <div class="login-mark">
+            <span class="ved-icon">V</span>
+            <span>Ved AI Assistant</span>
+          </div>
+
+          <p class="eyebrow">Secure Google Sign-In</p>
+          <h1>Meet Ved, your personal AI workspace.</h1>
+          <p class="login-copy">
+            Sign in to keep your conversations, get personalized greetings, and use
+            real-time answers powered by Gemini and Google Search grounding.
+          </p>
+
+          {% if auth_error %}
+            <div class="auth-error">{{ auth_error }}</div>
+          {% endif %}
+
+          <a class="google-button" href="{{ url_for('login') }}">
+            <span class="google-logo" aria-hidden="true"></span>
+            Continue with Google
+          </a>
+
+          <div class="login-badges" aria-label="Ved features">
+            <span class="login-badge">Previous chats</span>
+            <span class="login-badge">Real-time info</span>
+            <span class="login-badge">Personal greeting</span>
+          </div>
+        </div>
+
+        <aside class="preview-panel" aria-label="Ved preview">
+          <div class="preview-shell">
+            <div class="preview-top">
+              <p class="preview-title">Ved</p>
+              <span class="preview-status">Online</span>
+            </div>
+            <div class="preview-messages">
+              <div class="preview-message assistant-preview">
+                Welcome back. I can help with questions, study notes, current facts, and ideas.
+              </div>
+              <div class="preview-message user-preview">
+                What changed today?
+              </div>
+              <div class="preview-message assistant-preview">
+                I can check live information and share sources when they are available.
+              </div>
+            </div>
+          </div>
+          <p class="preview-footnote">
+            Built for focused conversations with saved history, Google login, and a cleaner chat experience.
+          </p>
+        </aside>
       </section>
     </main>
   {% else %}
