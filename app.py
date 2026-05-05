@@ -415,7 +415,7 @@ def is_weather_query(message):
 
 def extract_weather_location(message):
     text = re.sub(
-        r"\b(weather|forecast|temperature|rain|raining|humidity|wind|cloudy|sunny|thunderstorm)\b",
+        r"\b(weather|forecast|temperature|rain|raining|humidity|wind|cloudy|sunny|thunderstorm|showers?|precipitation|precip|chance|chances|probability|possibility|risk)\b",
         " ",
         message,
         flags=re.IGNORECASE,
@@ -430,6 +430,47 @@ def extract_weather_location(message):
     return " ".join(text.split()).strip(" ,-")
 
 
+def weather_location_candidates(location_query):
+    candidates = []
+    seen = set()
+
+    def add(value):
+        cleaned = " ".join(str(value or "").replace(",", " ").split()).strip(" ,-")
+        if cleaned and cleaned.lower() not in seen:
+            candidates.append(cleaned)
+            seen.add(cleaned.lower())
+
+    add(location_query)
+
+    words = location_query.split()
+    if len(words) > 1:
+        for end in range(len(words) - 1, 0, -1):
+            add(" ".join(words[:end]))
+        for start in range(1, len(words)):
+            add(" ".join(words[start:]))
+
+    return candidates
+
+
+def geocode_weather_location(location_query):
+    last_url = ""
+    for candidate in weather_location_candidates(location_query):
+        geocode_params = urlencode({
+            "name": candidate,
+            "count": 1,
+            "language": "en",
+            "format": "json",
+        })
+        geocode_url = f"https://geocoding-api.open-meteo.com/v1/search?{geocode_params}"
+        last_url = geocode_url
+        geocode_data = fetch_json(geocode_url)
+        results = geocode_data.get("results") or []
+        if results:
+            return results[0], geocode_url, candidate
+
+    return None, last_url, location_query
+
+
 def build_weather_forecast_reply(message):
     if not is_weather_query(message):
         return None
@@ -441,22 +482,13 @@ def build_weather_forecast_reply(message):
             "sources": [],
         }
 
-    geocode_params = urlencode({
-        "name": location_query,
-        "count": 1,
-        "language": "en",
-        "format": "json",
-    })
-    geocode_url = f"https://geocoding-api.open-meteo.com/v1/search?{geocode_params}"
-    geocode_data = fetch_json(geocode_url)
-    results = geocode_data.get("results") or []
-    if not results:
+    location, geocode_url, matched_query = geocode_weather_location(location_query)
+    if not location:
         return {
             "reply": f"I could not find a weather location for {location_query}. Try a nearby city name.",
             "sources": [{"title": "Open-Meteo Geocoding", "uri": geocode_url}],
         }
 
-    location = results[0]
     latitude = location.get("latitude")
     longitude = location.get("longitude")
     label = ", ".join(
@@ -512,6 +544,9 @@ def build_weather_forecast_reply(message):
 
     if forecast_lines:
         lines.append("5-day forecast:\n" + "\n".join(forecast_lines))
+
+    if matched_query.lower() != location_query.lower():
+        lines.append(f"I searched for {matched_query} because {location_query} was not an exact weather-location match.")
 
     return {
         "reply": "\n".join(lines),
