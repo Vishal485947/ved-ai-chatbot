@@ -151,7 +151,8 @@
     }
 
     .history-clear {
-      width: 46px;
+      min-width: 62px;
+      padding: 0 10px;
       display: grid;
       place-items: center;
     }
@@ -179,7 +180,7 @@
 
     .conversation-row {
       display: grid;
-      grid-template-columns: 1fr 42px;
+      grid-template-columns: 1fr 48px;
       gap: 6px;
       align-items: stretch;
       margin-bottom: 6px;
@@ -204,7 +205,7 @@
     }
 
     .delete-chat-button {
-      min-width: 42px;
+      min-width: 48px;
       min-height: 44px;
       padding: 0;
       font-size: 18px;
@@ -564,54 +565,160 @@
 
     .login-wrap {
       min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 40px 24px;
+      display: block;
+      padding: 0;
       background:
-        radial-gradient(circle at 22% 20%, rgba(66, 133, 244, 0.18), transparent 30%),
-        radial-gradient(circle at 78% 12%, rgba(52, 168, 83, 0.14), transparent 28%),
-        linear-gradient(135deg, #eef5fb 0%, #f8fbff 48%, #edf3f8 100%);
+        linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+        radial-gradient(circle at 72% 12%, rgba(255, 122, 26, 0.16), transparent 31%),
+        radial-gradient(circle at 10% 92%, rgba(72, 229, 164, 0.1), transparent 28%),
+        #030507;
+      background-size: 128px 128px, 128px 128px, auto, auto, auto;
+      color: #ffffff;
+    }
+
+    .login-announcement {
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 20px;
+      border-bottom: 1px solid rgba(255, 122, 26, 0.18);
+      background: #1b0b02;
+      color: #c9c0b6;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .login-announcement strong {
+      padding: 4px 8px;
+      background: #ff7a1a;
+      color: #160800;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    .login-announcement a {
+      margin-left: auto;
+      color: #ff9a45;
+      text-decoration: none;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+    }
+
+    .login-nav {
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 28px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(3, 5, 7, 0.92);
+    }
+
+    .login-nav-brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .login-nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .login-nav-link {
+      color: #b5bfcb;
+      font-size: 13px;
+      font-weight: 800;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+
+    .login-nav-link:hover,
+    .login-announcement a:hover {
+      color: #ffffff;
+    }
+
+    .login-nav-cta {
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 14px;
+      border: 1px solid #ffffff;
+      color: #05070a;
+      background: #ffffff;
+      font-size: 12px;
+      font-weight: 900;
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .login-nav-cta:hover {
+      border-color: #ff7a1a;
+      background: #ff7a1a;
+      color: #160800;
     }
 
     .login-stage {
-      width: min(1060px, 100%);
+      width: 100%;
+      min-height: calc(100vh - 108px);
       display: grid;
-      grid-template-columns: 1fr 0.9fr;
+      grid-template-columns: minmax(0, 1.02fr) minmax(380px, 0.78fr);
       gap: 0;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #ffffff;
+      border: 0;
+      border-radius: 0;
+      background:
+        linear-gradient(90deg, rgba(3, 5, 7, 0.34), rgba(3, 5, 7, 0.8)),
+        transparent;
       overflow: hidden;
-      box-shadow: 0 24px 70px rgba(16, 24, 38, 0.16);
+      box-shadow: none;
     }
 
     .login-card {
-      padding: 44px;
-      background: #ffffff;
+      padding: clamp(42px, 7vw, 82px) clamp(28px, 6vw, 72px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: transparent;
     }
 
     .login-mark {
       display: inline-flex;
       align-items: center;
       gap: 12px;
-      margin-bottom: 34px;
-      color: var(--muted);
-      font-weight: 700;
+      margin-bottom: 26px;
+      color: #d4dce7;
+      font-weight: 800;
     }
 
     .login-card h1 {
       margin: 0 0 14px;
-      font-size: 46px;
-      line-height: 1.05;
+      max-width: 820px;
+      color: #ffffff;
+      font-size: clamp(56px, 8vw, 116px);
+      line-height: 0.92;
       letter-spacing: 0;
     }
 
+    .login-card .eyebrow {
+      color: #ff7a1a;
+    }
+
     .login-copy {
-      max-width: 480px;
-      margin-bottom: 28px;
-      color: var(--muted);
-      font-size: 17px;
-      line-height: 1.5;
+      max-width: 650px;
+      margin-bottom: 30px;
+      color: #c0c8d2;
+      font-size: 18px;
+      line-height: 1.55;
     }
 
     .google-button {
@@ -621,19 +728,19 @@
       justify-content: center;
       min-height: 52px;
       padding: 0 20px;
-      border: 1px solid #cfd8e3;
-      border-radius: 8px;
+      border: 1px solid #ffffff;
+      border-radius: 4px;
       background: #ffffff;
-      color: var(--ink);
+      color: #05070a;
       font-size: 16px;
-      font-weight: 700;
+      font-weight: 800;
       text-decoration: none;
-      box-shadow: 0 8px 18px rgba(16, 24, 38, 0.08);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
     }
 
     .google-button:hover {
-      border-color: #aeb9c8;
-      background: #f8fbff;
+      border-color: #ff7a1a;
+      background: #fff7ef;
     }
 
     .google-logo {
@@ -668,10 +775,10 @@
     .auth-error {
       margin: 18px 0;
       padding: 12px;
-      border: 1px solid #f1b4b4;
-      border-radius: 8px;
-      background: #fff2f2;
-      color: #9d2020;
+      border: 1px solid rgba(240, 82, 82, 0.55);
+      border-radius: 6px;
+      background: rgba(240, 82, 82, 0.12);
+      color: #ffd5d5;
     }
 
     .login-badges {
@@ -683,30 +790,34 @@
 
     .login-badge {
       padding: 8px 10px;
-      border: 1px solid var(--line);
+      border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 999px;
-      color: var(--muted);
+      color: #d4dce7;
       font-size: 13px;
       font-weight: 700;
-      background: #f8fbff;
+      background: rgba(255, 255, 255, 0.05);
     }
 
     .preview-panel {
-      min-height: 520px;
-      padding: 38px;
+      min-height: calc(100vh - 108px);
+      padding: clamp(28px, 5vw, 58px);
       display: grid;
       align-content: center;
       background:
-        linear-gradient(180deg, rgba(16, 24, 38, 0.94), rgba(20, 32, 48, 0.98));
+        linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(10, 15, 22, 0.88), rgba(6, 10, 15, 0.96));
+      background-size: 96px 96px, 96px 96px, auto;
       color: #ffffff;
+      border-left: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .preview-shell {
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 6px;
       overflow: hidden;
-      background: rgba(255, 255, 255, 0.06);
-      box-shadow: 0 22px 45px rgba(0, 0, 0, 0.2);
+      background: rgba(12, 18, 26, 0.86);
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.34);
     }
 
     .preview-top {
@@ -715,7 +826,7 @@
       justify-content: space-between;
       gap: 16px;
       padding: 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
     }
 
     .preview-title {
@@ -727,7 +838,7 @@
     }
 
     .preview-status {
-      color: #8de8b1;
+      color: #86ffc5;
       font-size: 13px;
       font-weight: 700;
     }
@@ -742,25 +853,25 @@
     .preview-message {
       max-width: 88%;
       padding: 12px 13px;
-      border-radius: 8px;
+      border-radius: 6px;
       line-height: 1.45;
       font-size: 14px;
     }
 
     .preview-message.assistant-preview {
       background: #ffffff;
-      color: var(--ink);
+      color: #101826;
     }
 
     .preview-message.user-preview {
       align-self: flex-end;
-      background: var(--brand);
-      color: #ffffff;
+      background: #ff7a1a;
+      color: #160800;
     }
 
     .preview-footnote {
       margin: 18px 0 0;
-      color: #b8c5d8;
+      color: #c6d1df;
       font-size: 13px;
       line-height: 1.5;
     }
@@ -772,10 +883,13 @@
 
       .login-stage {
         grid-template-columns: 1fr;
+        min-height: auto;
       }
 
       .preview-panel {
         min-height: auto;
+        border-left: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
       }
 
       .sidebar {
@@ -793,7 +907,28 @@
 
     @media (max-width: 560px) {
       .login-wrap {
-        padding: 18px;
+        padding: 0;
+      }
+
+      .login-announcement {
+        flex-wrap: wrap;
+      }
+
+      .login-announcement a {
+        margin-left: 0;
+      }
+
+      .login-nav {
+        min-height: 64px;
+        padding: 0 18px;
+      }
+
+      .login-nav-actions {
+        gap: 10px;
+      }
+
+      .login-nav-link {
+        display: none;
       }
 
       .login-card,
@@ -802,7 +937,7 @@
       }
 
       .login-card h1 {
-        font-size: 36px;
+        font-size: 48px;
       }
 
       .topbar {
@@ -846,6 +981,26 @@
 <body>
   {% if not user %}
     <main class="login-wrap">
+      <div class="login-announcement">
+        <strong>New</strong>
+        <span>Real-time weather, news, and election updates are available in Ved.</span>
+        <a href="{{ url_for('login') }}">Try it now</a>
+      </div>
+
+      <nav class="login-nav" aria-label="Ved navigation">
+        <a class="login-nav-brand" href="{{ url_for('home') }}" aria-label="Ved home">
+          <svg class="ved-logo mini" viewBox="0 0 96 96" aria-hidden="true">
+            <path fill="#ff7a1a" d="M14 18c0-5.5 4.5-10 10-10h48c5.5 0 10 4.5 10 10v39.6c0 5.5-4.5 10-10 10H50.4L32.8 84.3c-2.8 2.7-7.5.7-7.5-3.2V67.6H24c-5.5 0-10-4.5-10-10V18Z"></path>
+            <path fill="#160800" d="M30.3 25.5h10.4l8.5 25.1 8.6-25.1h10.1L54.4 61.8H43.8L30.3 25.5Z"></path>
+          </svg>
+          Ved AI
+        </a>
+        <div class="login-nav-actions">
+          <a class="login-nav-link" href="{{ url_for('login') }}">Login</a>
+          <a class="login-nav-cta" href="{{ url_for('login') }}">Get Access</a>
+        </div>
+      </nav>
+
       <section class="login-stage" aria-label="Ved sign in">
         <div class="login-card">
           <div class="login-mark">
@@ -855,12 +1010,12 @@
               <path fill="url(#vedAccentGradientLogin)" d="M66.2 23.8a6 6 0 1 1 0 12.1 6 6 0 0 1 0-12.1ZM74.1 41.3a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 0 1 0-8.4Z"></path>
               <defs>
                 <linearGradient id="vedLogoGradientLogin" x1="14" x2="82" y1="10" y2="86" gradientUnits="userSpaceOnUse">
-                  <stop offset="0" stop-color="#2358e6"></stop>
+                  <stop offset="0" stop-color="#ff7a1a"></stop>
                   <stop offset="1" stop-color="#101826"></stop>
                 </linearGradient>
                 <linearGradient id="vedAccentGradientLogin" x1="28" x2="72" y1="20" y2="76" gradientUnits="userSpaceOnUse">
-                  <stop offset="0" stop-color="#8fd3ff"></stop>
-                  <stop offset="1" stop-color="#34a853"></stop>
+                  <stop offset="0" stop-color="#ffd166"></stop>
+                  <stop offset="1" stop-color="#48e5a4"></stop>
                 </linearGradient>
               </defs>
             </svg>
@@ -952,7 +1107,7 @@
             aria-label="Delete all chat history"
             title="Delete all chat history"
           >
-            ×
+            Clear
           </button>
         </div>
         <div class="conversation-heading">Previous Conversations</div>
@@ -1679,7 +1834,7 @@
             deleteButton.className = "delete-chat-button";
             deleteButton.title = `Delete ${conversation.title}`;
             deleteButton.setAttribute("aria-label", `Delete conversation ${conversation.title}`);
-            deleteButton.textContent = "×";
+            deleteButton.textContent = "Del";
             deleteButton.addEventListener("click", () => {
               deleteConversation(conversation.id, true);
             });
