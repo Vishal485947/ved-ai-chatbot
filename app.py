@@ -1,7 +1,11 @@
+import json
 import os
+import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from authlib.integrations.flask_client import OAuth
@@ -132,6 +136,20 @@ def needs_real_time_search(message):
         "release date",
         "available now",
         "near me",
+        "election",
+        "elections",
+        "election result",
+        "election results",
+        "vote count",
+        "votes",
+        "poll",
+        "polls",
+        "exit poll",
+        "winner",
+        "leading",
+        "results",
+        "headlines",
+        "breaking",
         "search web",
         "search google",
         "look up",
@@ -268,6 +286,21 @@ def extract_grounding(response):
     return {"sources": sources, "searchHtml": search_html}
 
 
+def merge_sources(*source_lists):
+    merged = []
+    seen = set()
+    for source_list in source_lists:
+        for source in source_list or []:
+            uri = source.get("uri") if isinstance(source, dict) else ""
+            if not uri or uri in seen:
+                continue
+            merged.append(source)
+            seen.add(uri)
+            if len(merged) >= 8:
+                return merged
+    return merged
+
+
 def user_timezone(timezone_name):
     if not timezone_name or not isinstance(timezone_name, str) or len(timezone_name) > 80:
         timezone_name = "UTC"
@@ -310,6 +343,279 @@ def asks_about_creator(message):
         "your maker",
     ]
     return any(phrase in normalized for phrase in creator_phrases)
+
+
+def fetch_json(url, timeout=8):
+    request = Request(url, headers={"User-Agent": "VedAIChatbot/1.0"})
+    with urlopen(request, timeout=timeout) as response:
+        charset = response.headers.get_content_charset() or "utf-8"
+        return json.loads(response.read().decode(charset))
+
+
+def weather_code_description(code):
+    descriptions = {
+        0: "clear sky",
+        1: "mainly clear",
+        2: "partly cloudy",
+        3: "overcast",
+        45: "fog",
+        48: "rime fog",
+        51: "light drizzle",
+        53: "moderate drizzle",
+        55: "dense drizzle",
+        61: "slight rain",
+        63: "moderate rain",
+        65: "heavy rain",
+        71: "slight snow",
+        73: "moderate snow",
+        75: "heavy snow",
+        80: "slight rain showers",
+        81: "moderate rain showers",
+        82: "violent rain showers",
+        95: "thunderstorm",
+        96: "thunderstorm with hail",
+        99: "thunderstorm with heavy hail",
+    }
+    try:
+        numeric_code = int(code)
+    except (TypeError, ValueError):
+        return "conditions unavailable"
+    return descriptions.get(numeric_code, "mixed conditions")
+
+
+def format_number(value, decimals=0):
+    if value is None:
+        return "n/a"
+    try:
+        return f"{float(value):.{decimals}f}"
+    except (TypeError, ValueError):
+        return "n/a"
+
+
+def clean_unit(value, fallback):
+    return str(value or fallback).replace(chr(176), "").strip()
+
+
+def is_weather_query(message):
+    normalized = " " + re.sub(r"[^a-z0-9]+", " ", message.lower()) + " "
+    weather_terms = [
+        " weather ",
+        " forecast ",
+        " temperature ",
+        " rain ",
+        " raining ",
+        " humidity ",
+        " wind ",
+        " cloudy ",
+        " sunny ",
+        " thunderstorm ",
+    ]
+    return any(term in normalized for term in weather_terms)
+
+
+def extract_weather_location(message):
+    text = re.sub(
+        r"\b(weather|forecast|temperature|rain|raining|humidity|wind|cloudy|sunny|thunderstorm)\b",
+        " ",
+        message,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"\b(what'?s|what is|tell me|show me|give me|today|tomorrow|now|current|right now|in|for|at|near|please|will it|is it|the|of)\b",
+        " ",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"[^a-zA-Z0-9,\s-]", " ", text)
+    return " ".join(text.split()).strip(" ,-")
+
+
+def build_weather_forecast_reply(message):
+    if not is_weather_query(message):
+        return None
+
+    location_query = extract_weather_location(message)
+    if not location_query:
+        return {
+            "reply": "Which city or place should I check the weather for?",
+            "sources": [],
+        }
+
+    geocode_params = urlencode({
+        "name": location_query,
+        "count": 1,
+        "language": "en",
+        "format": "json",
+    })
+    geocode_url = f"https://geocoding-api.open-meteo.com/v1/search?{geocode_params}"
+    geocode_data = fetch_json(geocode_url)
+    results = geocode_data.get("results") or []
+    if not results:
+        return {
+            "reply": f"I could not find a weather location for {location_query}. Try a nearby city name.",
+            "sources": [{"title": "Open-Meteo Geocoding", "uri": geocode_url}],
+        }
+
+    location = results[0]
+    latitude = location.get("latitude")
+    longitude = location.get("longitude")
+    label = ", ".join(
+        part for part in [
+            location.get("name"),
+            location.get("admin1"),
+            location.get("country"),
+        ]
+        if part
+    )
+
+    forecast_params = urlencode({
+        "latitude": latitude,
+        "longitude": longitude,
+        "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m",
+        "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max",
+        "forecast_days": 5,
+        "timezone": "auto",
+    })
+    forecast_url = f"https://api.open-meteo.com/v1/forecast?{forecast_params}"
+    forecast_data = fetch_json(forecast_url)
+    current = forecast_data.get("current") or {}
+    current_units = forecast_data.get("current_units") or {}
+    daily = forecast_data.get("daily") or {}
+
+    temp_unit = clean_unit(current_units.get("temperature_2m"), "C")
+    wind_unit = clean_unit(current_units.get("wind_speed_10m"), "km/h")
+    current_description = weather_code_description(current.get("weather_code"))
+    lines = [
+        f"Weather for {label}: {format_number(current.get('temperature_2m'), 1)} degrees {temp_unit} and {current_description}.",
+        f"Feels like {format_number(current.get('apparent_temperature'), 1)} degrees {temp_unit}; humidity {format_number(current.get('relative_humidity_2m'))}%; wind {format_number(current.get('wind_speed_10m'))} {wind_unit}.",
+    ]
+
+    times = daily.get("time") or []
+    max_temps = daily.get("temperature_2m_max") or []
+    min_temps = daily.get("temperature_2m_min") or []
+    rain_chances = daily.get("precipitation_probability_max") or []
+    weather_codes = daily.get("weather_code") or []
+
+    forecast_lines = []
+    for index, date_text in enumerate(times[:5]):
+        try:
+            day_label = datetime.fromisoformat(date_text).strftime("%a, %b %d")
+        except ValueError:
+            day_label = date_text
+        max_temp = max_temps[index] if index < len(max_temps) else None
+        min_temp = min_temps[index] if index < len(min_temps) else None
+        weather_code = weather_codes[index] if index < len(weather_codes) else None
+        rain_chance = rain_chances[index] if index < len(rain_chances) else None
+        forecast_lines.append(
+            f"- {day_label}: {format_number(max_temp, 1)}/{format_number(min_temp, 1)} degrees, {weather_code_description(weather_code)}, rain chance {format_number(rain_chance)}%"
+        )
+
+    if forecast_lines:
+        lines.append("5-day forecast:\n" + "\n".join(forecast_lines))
+
+    return {
+        "reply": "\n".join(lines),
+        "sources": [
+            {"title": "Open-Meteo Forecast", "uri": forecast_url},
+            {"title": "Open-Meteo Geocoding", "uri": geocode_url},
+        ],
+    }
+
+
+def is_live_news_query(message):
+    if is_weather_query(message):
+        return False
+    normalized = " " + re.sub(r"[^a-z0-9]+", " ", message.lower()) + " "
+    live_news_terms = [
+        " news ",
+        " headline",
+        " breaking ",
+        " election",
+        " vote count",
+        " election result",
+        " election results",
+        " exit poll",
+        " who won",
+        " winner",
+        " leading",
+    ]
+    return any(term in normalized for term in live_news_terms)
+
+
+def extract_live_news_query(message):
+    text = re.sub(
+        r"\b(latest|current|today|now|right now|show me|tell me|give me|updates?|headlines?|news|breaking|live|please)\b",
+        " ",
+        message,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"[^a-zA-Z0-9,\s-]", " ", text)
+    query = " ".join(text.split()).strip(" ,-")
+    return compact_text(query or message or "breaking news", 180)
+
+
+def fetch_live_news_articles(message, max_records=5):
+    if not is_live_news_query(message):
+        return "", [], []
+
+    query = extract_live_news_query(message)
+    gdelt_params = urlencode({
+        "query": query,
+        "mode": "ArtList",
+        "format": "json",
+        "maxrecords": max_records,
+        "sort": "datedesc",
+        "timespan": "2d",
+    })
+    gdelt_url = f"https://api.gdeltproject.org/api/v2/doc/doc?{gdelt_params}"
+    data = fetch_json(gdelt_url)
+    raw_articles = data.get("articles") or []
+    articles = []
+
+    for item in raw_articles[:max_records]:
+        url = item.get("url")
+        title = compact_text(item.get("title"), 180)
+        if not url or not title:
+            continue
+        articles.append({
+            "title": title,
+            "uri": url,
+            "domain": item.get("domain") or "",
+            "seenDate": item.get("seendate") or item.get("seenDate") or "",
+            "sourceCountry": item.get("sourcecountry") or item.get("sourceCountry") or "",
+        })
+
+    sources = [{"title": article["title"], "uri": article["uri"]} for article in articles]
+    if articles:
+        sources.append({"title": "GDELT DOC 2.0", "uri": gdelt_url})
+
+    return query, articles, sources
+
+
+def build_live_news_context(query, articles):
+    if not articles:
+        return ""
+
+    lines = [f"Recent live news context for query: {query}"]
+    for article in articles:
+        source_bits = ", ".join(
+            bit for bit in [article.get("domain"), article.get("sourceCountry"), article.get("seenDate")] if bit
+        )
+        lines.append(f"- {article['title']} ({source_bits}): {article['uri']}")
+    return "\n".join(lines)
+
+
+def format_live_news_fallback(query, articles):
+    if not articles:
+        return "I could not fetch fresh live results right now. Please try again in a minute."
+
+    lines = [f"I found these recent live sources for {query}:"]
+    for index, article in enumerate(articles, start=1):
+        source = article.get("domain") or "source"
+        seen = article.get("seenDate") or "recent"
+        lines.append(f"{index}. {article['title']} ({source}, {seen})")
+    lines.append("Open the source links for the latest details, because live news and election counts can change quickly.")
+    return "\n".join(lines)
 
 
 def quick_local_reply(message, user_name):
@@ -434,12 +740,41 @@ def chat():
             "searchHtml": "",
         })
 
+    if is_weather_query(user_message):
+        try:
+            weather_result = build_weather_forecast_reply(user_message)
+        except Exception:
+            weather_result = {
+                "reply": "I could not fetch the live weather forecast right now. Please try again in a minute.",
+                "sources": [],
+            }
+
+        return jsonify({
+            "reply": weather_result["reply"],
+            "sources": weather_result.get("sources", []),
+            "searchHtml": "",
+        })
+
     if rate_limit_exceeded():
         return jsonify({
             "error": "Ved is getting a lot of messages from this visitor. Please wait before sending more."
         }), 429
 
     conversation = build_conversation_context(history, user_message, context_summary)
+    live_news_query = ""
+    live_news_articles = []
+    live_news_sources = []
+    if is_live_news_query(user_message):
+        try:
+            live_news_query, live_news_articles, live_news_sources = fetch_live_news_articles(user_message)
+        except Exception:
+            live_news_query = extract_live_news_query(user_message)
+            live_news_articles = []
+            live_news_sources = []
+
+        live_news_context = build_live_news_context(live_news_query, live_news_articles)
+        if live_news_context:
+            conversation.insert(-1, live_news_context)
 
     try:
         try:
@@ -489,7 +824,15 @@ def chat():
                     continue
                 raise
         else:
-            if unavailable_models and len(unavailable_models) == len(model_candidates):
+            known_failures = len(unavailable_models) + len(not_found_models)
+            if unavailable_models and known_failures == len(model_candidates):
+                if live_news_articles:
+                    return jsonify({
+                        "reply": format_live_news_fallback(live_news_query, live_news_articles),
+                        "sources": live_news_sources,
+                        "searchHtml": "",
+                    })
+
                 return jsonify({
                     "error": "Gemini is temporarily overloaded. Ved is switching to the backup AI if available; otherwise, please try again in a minute."
                 }), 503
@@ -502,7 +845,12 @@ def chat():
         answer = (response.text or "").strip()
         if not answer:
             answer = "I could not generate a reply for that. Please try asking another way."
-        return jsonify({"reply": answer, **extract_grounding(response)})
+        grounding = extract_grounding(response)
+        return jsonify({
+            "reply": answer,
+            "sources": merge_sources(grounding.get("sources"), live_news_sources),
+            "searchHtml": grounding.get("searchHtml", ""),
+        })
     except Exception as exc:
         error_text = str(exc).lower()
         if "api key" in error_text or "unauthenticated" in error_text:
@@ -516,6 +864,13 @@ def chat():
             }), 429
 
         if is_gemini_unavailable_error(error_text):
+            if live_news_articles:
+                return jsonify({
+                    "reply": format_live_news_fallback(live_news_query, live_news_articles),
+                    "sources": live_news_sources,
+                    "searchHtml": "",
+                })
+
             return jsonify({
                 "error": "Gemini is temporarily overloaded. Ved is switching to the backup AI if available; otherwise, please try again in a minute."
             }), 503
