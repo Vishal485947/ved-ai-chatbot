@@ -563,6 +563,336 @@
       cursor: not-allowed;
     }
 
+    .app {
+      --ink: #2b2925;
+      --muted: #777268;
+      --panel: #ffffff;
+      --line: #dfddd4;
+      --soft: #fbfaf6;
+      --brand: #d86d3c;
+      --brand-dark: #a64b26;
+      --nav: #f4f2eb;
+      --nav-soft: #ebe7dc;
+      --danger: #b42318;
+      --success: #168a53;
+      --focus: #8f6bff;
+      grid-template-columns: 276px 1fr;
+      background: #fbfaf6;
+    }
+
+    .sidebar {
+      background: #f4f2eb;
+      color: var(--ink);
+      border-right: 1px solid #dfddd4;
+    }
+
+    .brand,
+    .sidebar-footer {
+      border-color: #dfddd4;
+    }
+
+    .brand h1,
+    .profile-name {
+      color: var(--ink);
+    }
+
+    .sidebar .eyebrow,
+    .conversation-heading,
+    .conversation-date,
+    .profile-email {
+      color: var(--muted);
+    }
+
+    .new-chat {
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+      padding: 0 10px;
+    }
+
+    .new-chat:hover,
+    .new-chat:focus-visible,
+    .conversation-item:hover,
+    .conversation-item.active {
+      background: var(--nav-soft);
+      border-color: transparent;
+    }
+
+    .history-clear,
+    .delete-chat-button,
+    .logout {
+      border-color: #d6d2c7;
+      color: var(--muted);
+      background: transparent;
+    }
+
+    .history-clear:hover,
+    .delete-chat-button:hover,
+    .logout:hover {
+      border-color: #d7a08a;
+      background: #f4e7df;
+      color: var(--danger);
+    }
+
+    .conversation-item {
+      color: var(--ink);
+    }
+
+    .avatar {
+      background: #2b2925;
+    }
+
+    .main {
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      background: #fbfaf6;
+    }
+
+    .topbar {
+      min-height: 56px;
+      padding: 12px 24px;
+      background: #fbfaf6;
+      border-bottom: 0;
+    }
+
+    .topbar h2,
+    .topbar p {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .topbar h2 {
+      margin: 0;
+      font-weight: 700;
+    }
+
+    .status {
+      border-color: #d8e5d7;
+      background: #f4faf3;
+      color: var(--success);
+    }
+
+    .delete-current {
+      border-color: #e1d8d0;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .delete-current:hover {
+      background: #f4e7df;
+      color: var(--danger);
+    }
+
+    .messages {
+      width: min(760px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 26px 0 18px;
+      justify-content: flex-start;
+    }
+
+    .messages::before {
+      display: none;
+    }
+
+    .main.is-empty .messages {
+      justify-content: flex-end;
+      padding-bottom: 20px;
+    }
+
+    .welcome-panel {
+      position: relative;
+      z-index: 1;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .welcome-panel h2 {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 0;
+      color: #2b2925;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(34px, 5vw, 48px);
+      font-weight: 500;
+    }
+
+    .welcome-mark {
+      color: var(--brand);
+      font-family: Arial, sans-serif;
+      font-size: 34px;
+      line-height: 1;
+    }
+
+    .prompt-pills {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .prompt-pill {
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid #ddd8ce;
+      border-radius: 9px;
+      background: #fffefa;
+      color: #5d574e;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .prompt-pill:hover {
+      border-color: #cfc6ba;
+      background: #f7f2ea;
+    }
+
+    .message {
+      max-width: min(720px, 92%);
+      border-radius: 16px;
+      box-shadow: none;
+    }
+
+    .message.user {
+      background: #e9e2d7;
+      color: var(--ink);
+    }
+
+    .message.assistant {
+      background: transparent;
+      border: 0;
+      color: var(--ink);
+      padding-left: 0;
+    }
+
+    .composer {
+      position: relative;
+      width: min(676px, calc(100% - 32px));
+      display: block;
+      margin: 0 auto 32px;
+      padding: 12px;
+      border: 1px solid #dfddd4;
+      border-radius: 22px;
+      background: #ffffff;
+      box-shadow: 0 18px 48px rgba(43, 41, 37, 0.08);
+    }
+
+    .composer-row {
+      display: grid;
+      grid-template-columns: auto auto 1fr auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .file-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .composer input[type="text"] {
+      min-height: 48px;
+      border: 0;
+      background: transparent;
+      color: var(--ink);
+    }
+
+    .composer input[type="text"]:focus {
+      outline: 0;
+    }
+
+    .tool-button,
+    .voice-button,
+    .send-button {
+      min-height: 38px;
+      border-radius: 999px;
+      border: 1px solid #dfddd4;
+      background: transparent;
+      color: #5d574e;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .tool-button {
+      min-width: 38px;
+      padding: 0 12px;
+    }
+
+    .voice-button {
+      min-width: 44px;
+      padding: 0 10px;
+      gap: 0;
+    }
+
+    .voice-label {
+      display: none;
+    }
+
+    .voice-button:hover,
+    .tool-button:hover {
+      border-color: #cfc6ba;
+      background: #f7f2ea;
+    }
+
+    .send-button {
+      padding: 0 16px;
+      border-color: var(--brand);
+      background: var(--brand);
+      color: #ffffff;
+    }
+
+    .send-button:hover {
+      background: var(--brand-dark);
+    }
+
+    .attachment-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .attachment-chip,
+    .message-attachment {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 100%;
+      min-height: 32px;
+      padding: 6px 10px;
+      border: 1px solid #dfddd4;
+      border-radius: 999px;
+      background: #faf8f2;
+      color: #4f4a43;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .attachment-chip button {
+      min-height: 24px;
+      min-width: 24px;
+      border: 0;
+      border-radius: 999px;
+      background: #ebe7dc;
+      color: #5d574e;
+      cursor: pointer;
+    }
+
+    .message-attachments {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .voice-status {
+      margin: 8px 4px 0;
+    }
+
     .login-wrap {
       min-height: 100vh;
       display: block;
@@ -1153,27 +1483,55 @@
         <section id="chatMessages" class="messages" aria-live="polite"></section>
 
         <form id="chatForm" class="composer">
-          <button
-            id="voiceButton"
-            class="voice-button"
-            type="button"
-            aria-label="Send a voice message"
-            title="Send a voice message"
-          >
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Zm5-3a1 1 0 1 0-2 0 3 3 0 0 1-6 0 1 1 0 1 0-2 0 5 5 0 0 0 4 4.9V18H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.1a5 5 0 0 0 4-4.9Z"></path>
-            </svg>
-            <span class="voice-label">Voice</span>
-          </button>
-          <input
-            id="messageInput"
-            type="text"
-            autocomplete="off"
-            placeholder="Message Ved..."
-            aria-label="Message Ved"
-            required
-          />
-          <button class="send-button" type="submit">Send</button>
+          <div id="attachmentList" class="attachment-list" aria-live="polite"></div>
+          <div class="composer-row">
+            <button
+              id="attachButton"
+              class="tool-button"
+              type="button"
+              aria-label="Upload an image or document"
+              title="Upload an image or document"
+            >
+              +
+            </button>
+            <button
+              id="linkButton"
+              class="tool-button"
+              type="button"
+              aria-label="Add a web link"
+              title="Add a web link"
+            >
+              Link
+            </button>
+            <input
+              id="fileInput"
+              class="file-input"
+              type="file"
+              multiple
+              accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.pdf,.txt,.md,.csv,.json,.html,.xml"
+              aria-label="Choose files to attach"
+            />
+            <input
+              id="messageInput"
+              type="text"
+              autocomplete="off"
+              placeholder="How can I help you today?"
+              aria-label="Message Ved"
+            />
+            <button
+              id="voiceButton"
+              class="voice-button"
+              type="button"
+              aria-label="Send a voice message"
+              title="Send a voice message"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Zm5-3a1 1 0 1 0-2 0 3 3 0 0 1-6 0 1 1 0 1 0-2 0 5 5 0 0 0 4 4.9V18H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.1a5 5 0 0 0 4-4.9Z"></path>
+              </svg>
+              <span class="voice-label">Voice</span>
+            </button>
+            <button class="send-button" type="submit" aria-label="Send message">Send</button>
+          </div>
           <p id="voiceStatus" class="voice-status" aria-live="polite"></p>
         </form>
       </main>
@@ -1192,19 +1550,28 @@
       const newChatButton = document.querySelector("#newChatButton");
       const clearHistoryButton = document.querySelector("#clearHistoryButton");
       const deleteCurrentButton = document.querySelector("#deleteCurrentButton");
+      const attachButton = document.querySelector("#attachButton");
+      const linkButton = document.querySelector("#linkButton");
+      const fileInput = document.querySelector("#fileInput");
+      const attachmentList = document.querySelector("#attachmentList");
       const voiceButton = document.querySelector("#voiceButton");
       const voiceStatus = document.querySelector("#voiceStatus");
+      const mainPanel = document.querySelector(".main");
       const storageKey = `ved_conversations_${currentUser.email}`;
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const promptRecentMessageCount = 8;
       const promptSummaryLimit = 1600;
       const promptMessageLimit = 700;
+      const maxAttachmentCount = 4;
+      const maxAttachmentBytes = 6 * 1024 * 1024;
+      const maxAttachmentTextChars = 60000;
       const backupTextModel = "gpt-5-nano";
       const backupWebSearchModel = "openai/gpt-5.2-chat";
 
       let conversations = loadConversations();
       let activeId = conversations[0]?.id || createConversation().id;
+      let pendingAttachments = [];
       let recognition = null;
       let isListening = false;
       let recognizedVoiceText = "";
@@ -1214,6 +1581,7 @@
 
       renderConversationList();
       renderMessages();
+      renderPendingAttachments();
       setupVoiceInput();
 
       newChatButton.addEventListener("click", () => {
@@ -1248,24 +1616,51 @@
         deleteConversation(activeId, true);
       });
 
+      attachButton.addEventListener("click", () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener("change", async () => {
+        await addFiles(fileInput.files);
+        fileInput.value = "";
+      });
+
+      linkButton.addEventListener("click", () => {
+        const url = window.prompt("Paste a web link for Ved to read:");
+        if (!url) {
+          return;
+        }
+
+        addLinkAttachment(url);
+      });
+
       chatForm.addEventListener("submit", async (event) => {
         event.preventDefault();
 
         const text = messageInput.value.trim();
-        if (!text) return;
+        if (!text && !pendingAttachments.length) return;
 
         const isVoiceMessage = submitNextAsVoice;
         submitNextAsVoice = false;
+        const attachmentsForRequest = [
+          ...pendingAttachments,
+          ...linksFromMessage(text, maxAttachmentCount - pendingAttachments.length),
+        ];
+        const attachmentSummaries = attachmentsForRequest.map(attachmentSummary);
+        const userContent = text || "Please review the attachment.";
+        pendingAttachments = [];
+        renderPendingAttachments();
 
         const conversation = activeConversation();
         conversation.messages.push({
           role: "user",
-          content: text,
+          content: userContent,
           inputType: isVoiceMessage ? "voice" : "text",
+          attachments: attachmentSummaries,
         });
         conversation.updatedAt = new Date().toISOString();
         if (conversation.title === "New conversation") {
-          conversation.title = text.slice(0, 44);
+          conversation.title = (text || attachmentSummaries[0]?.name || "Attachment chat").slice(0, 44);
         }
 
         messageInput.value = "";
@@ -1277,6 +1672,8 @@
         const voiceWasDisabled = voiceButton.disabled;
         sendButton.disabled = true;
         voiceButton.disabled = true;
+        attachButton.disabled = true;
+        linkButton.disabled = true;
         messageInput.disabled = true;
 
         const loading = { role: "assistant", content: "Ved is thinking..." };
@@ -1295,10 +1692,11 @@
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              message: text,
+              message: userContent,
               history,
               contextSummary,
               timezone: userTimezone,
+              attachments: attachmentsForRequest,
             }),
           });
 
@@ -1313,11 +1711,11 @@
           }
 
           if (!response.ok) {
-            if (shouldUseBackupAi(response.status, data.error)) {
+            if (!attachmentsForRequest.length && shouldUseBackupAi(response.status, data.error)) {
               loading.content = "Ved is checking...";
               renderMessages();
 
-              const backupReply = await getBackupReply(text, priorMessages);
+              const backupReply = await getBackupReply(userContent, priorMessages);
               conversation.messages = conversation.messages.filter((message) => message !== loading);
               conversation.messages.push({
                 role: "assistant",
@@ -1364,10 +1762,190 @@
           renderMessages();
           sendButton.disabled = false;
           voiceButton.disabled = voiceWasDisabled;
+          attachButton.disabled = false;
+          linkButton.disabled = false;
           messageInput.disabled = false;
           messageInput.focus();
         }
       });
+
+      async function addFiles(fileList) {
+        const files = Array.from(fileList || []);
+        for (const file of files) {
+          if (pendingAttachments.length >= maxAttachmentCount) {
+            setVoiceStatus(`You can attach up to ${maxAttachmentCount} items at a time.`);
+            break;
+          }
+
+          if (file.size > maxAttachmentBytes) {
+            setVoiceStatus(`${file.name} is too large. Keep each attachment under 6 MB.`);
+            continue;
+          }
+
+          try {
+            pendingAttachments.push(await fileToAttachment(file));
+          } catch (error) {
+            setVoiceStatus(`Could not attach ${file.name}: ${error?.message || error}`);
+          }
+        }
+
+        renderPendingAttachments();
+        messageInput.focus();
+      }
+
+      function addLinkAttachment(rawUrl) {
+        try {
+          const url = new URL(rawUrl.trim());
+          if (!["http:", "https:"].includes(url.protocol)) {
+            throw new Error("Only http and https links are supported.");
+          }
+
+          if (pendingAttachments.length >= maxAttachmentCount) {
+            setVoiceStatus(`You can attach up to ${maxAttachmentCount} items at a time.`);
+            return;
+          }
+
+          pendingAttachments.push({
+            id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+            type: "link",
+            name: url.hostname,
+            url: url.href,
+          });
+          renderPendingAttachments();
+          messageInput.focus();
+        } catch (error) {
+          setVoiceStatus(error?.message || "That link could not be attached.");
+        }
+      }
+
+      function linksFromMessage(text, limit) {
+        if (limit <= 0) {
+          return [];
+        }
+
+        const matches = String(text || "").match(/https?:\/\/[^\s]+/g) || [];
+        const seen = new Set(pendingAttachments.filter((item) => item.url).map((item) => item.url));
+        return matches
+          .map((value) => value.replace(/[),.;]+$/, ""))
+          .filter((value) => {
+            if (seen.has(value)) {
+              return false;
+            }
+            seen.add(value);
+            return true;
+          })
+          .slice(0, limit)
+          .map((value) => {
+            try {
+              const url = new URL(value);
+              return {
+                id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${value}`,
+                type: "link",
+                name: url.hostname,
+                url: url.href,
+              };
+            } catch {
+              return null;
+            }
+          })
+          .filter(Boolean);
+      }
+
+      async function fileToAttachment(file) {
+        const mimeType = file.type || mimeFromName(file.name);
+        const attachment = {
+          id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${file.name}`,
+          type: isTextAttachment(file, mimeType) ? "text" : "inline",
+          name: file.name,
+          mimeType,
+          size: file.size,
+        };
+
+        if (attachment.type === "text") {
+          attachment.text = compactForPrompt(await file.text(), maxAttachmentTextChars);
+        } else {
+          attachment.data = await readFileAsBase64(file);
+        }
+
+        return attachment;
+      }
+
+      function isTextAttachment(file, mimeType) {
+        const name = file.name.toLowerCase();
+        return (
+          mimeType.startsWith("text/") ||
+          ["application/json", "application/xml"].includes(mimeType) ||
+          [".txt", ".md", ".csv", ".json", ".html", ".xml", ".css", ".js"].some((suffix) => name.endsWith(suffix))
+        );
+      }
+
+      function mimeFromName(name) {
+        const lowerName = String(name || "").toLowerCase();
+        if (lowerName.endsWith(".png")) return "image/png";
+        if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")) return "image/jpeg";
+        if (lowerName.endsWith(".webp")) return "image/webp";
+        if (lowerName.endsWith(".heic")) return "image/heic";
+        if (lowerName.endsWith(".heif")) return "image/heif";
+        if (lowerName.endsWith(".pdf")) return "application/pdf";
+        if (lowerName.endsWith(".md")) return "text/markdown";
+        if (lowerName.endsWith(".csv")) return "text/csv";
+        if (lowerName.endsWith(".json")) return "application/json";
+        if (lowerName.endsWith(".html")) return "text/html";
+        if (lowerName.endsWith(".xml")) return "application/xml";
+        if (lowerName.endsWith(".docx")) {
+          return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        }
+        return "application/octet-stream";
+      }
+
+      function readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.addEventListener("load", () => {
+            resolve(String(reader.result || "").split(",")[1] || "");
+          });
+          reader.addEventListener("error", () => reject(reader.error || new Error("File read failed")));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function attachmentSummary(attachment) {
+        return {
+          type: attachment.type,
+          name: attachment.name,
+          url: attachment.url,
+          mimeType: attachment.mimeType,
+          size: attachment.size,
+        };
+      }
+
+      function renderPendingAttachments() {
+        attachmentList.innerHTML = "";
+        if (!pendingAttachments.length) {
+          return;
+        }
+
+        pendingAttachments.forEach((attachment) => {
+          const chip = document.createElement("span");
+          chip.className = "attachment-chip";
+
+          const label = document.createElement("span");
+          label.textContent = attachment.name || attachment.url || "Attachment";
+
+          const removeButton = document.createElement("button");
+          removeButton.type = "button";
+          removeButton.setAttribute("aria-label", `Remove ${label.textContent}`);
+          removeButton.textContent = "Del";
+          removeButton.addEventListener("click", () => {
+            pendingAttachments = pendingAttachments.filter((item) => item.id !== attachment.id);
+            renderPendingAttachments();
+            messageInput.focus();
+          });
+
+          chip.append(label, removeButton);
+          attachmentList.appendChild(chip);
+        });
+      }
 
       function setupVoiceInput() {
         if (!SpeechRecognition) {
@@ -1846,7 +2424,47 @@
 
       function renderMessages() {
         const conversation = activeConversation();
+        const hasUserMessages = conversation.messages.some((message) => message.role === "user");
+        mainPanel.classList.toggle("is-empty", !hasUserMessages);
         chatMessages.innerHTML = "";
+
+        if (!hasUserMessages) {
+          const welcome = document.createElement("section");
+          welcome.className = "welcome-panel";
+          welcome.setAttribute("aria-label", "Ved welcome");
+
+          const title = document.createElement("h2");
+          const mark = document.createElement("span");
+          mark.className = "welcome-mark";
+          mark.setAttribute("aria-hidden", "true");
+          mark.textContent = "*";
+          const titleText = document.createElement("span");
+          titleText.textContent = `${currentUser.name?.split(" ")[0] || "there"} returns!`;
+          title.append(mark, titleText);
+
+          const pills = document.createElement("div");
+          pills.className = "prompt-pills";
+          [
+            "Explain this image",
+            "Summarize a document",
+            "Check this link",
+            "Weather forecast",
+          ].forEach((prompt) => {
+            const pill = document.createElement("button");
+            pill.type = "button";
+            pill.className = "prompt-pill";
+            pill.textContent = prompt;
+            pill.addEventListener("click", () => {
+              messageInput.value = prompt;
+              messageInput.focus();
+            });
+            pills.appendChild(pill);
+          });
+
+          welcome.append(title, pills);
+          chatMessages.appendChild(welcome);
+          return;
+        }
 
         conversation.messages.forEach((message) => {
           const bubble = document.createElement("article");
@@ -1859,6 +2477,18 @@
               ? cleanAssistantText(message.content) || "Ved could not show that reply. Please send the message again."
               : String(message.content ?? "");
           bubble.appendChild(text);
+
+          if (Array.isArray(message.attachments) && message.attachments.length) {
+            const attachments = document.createElement("div");
+            attachments.className = "message-attachments";
+            message.attachments.forEach((attachment) => {
+              const item = document.createElement("span");
+              item.className = "message-attachment";
+              item.textContent = attachment.name || attachment.url || "Attachment";
+              attachments.appendChild(item);
+            });
+            bubble.appendChild(attachments);
+          }
 
           if (message.role === "user" && message.inputType === "voice") {
             const tag = document.createElement("span");

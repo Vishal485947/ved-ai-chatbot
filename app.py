@@ -1,10 +1,13 @@
+import base64
+import binascii
+import ipaddress
 import json
 import os
 import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -57,6 +60,20 @@ FALLBACK_GEMINI_MODELS = [
 ]
 
 VISITOR_MESSAGE_LOG = {}
+
+MAX_ATTACHMENTS = 4
+MAX_INLINE_ATTACHMENT_BYTES = 6 * 1024 * 1024
+MAX_LINK_FETCH_BYTES = 2 * 1024 * 1024
+MAX_ATTACHMENT_TEXT_CHARS = 60000
+SUPPORTED_INLINE_MIME_PREFIXES = ()
+SUPPORTED_INLINE_MIME_TYPES = {
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+    "application/pdf",
+}
 
 
 def visitor_ip():
@@ -350,6 +367,148 @@ def fetch_json(url, timeout=8):
     with urlopen(request, timeout=timeout) as response:
         charset = response.headers.get_content_charset() or "utf-8"
         return json.loads(response.read().decode(charset))
+
+
+def is_supported_inline_mime(mime_type):
+    mime = (mime_type or "").split(";")[0].strip().lower()
+    return mime in SUPPORTED_INLINE_MIME_TYPES or any(
+        mime.startswith(prefix) for prefix in SUPPORTED_INLINE_MIME_PREFIXES
+    )
+
+
+def is_text_mime(mime_type):
+    mime = (mime_type or "").split(";")[0].strip().lower()
+    return mime.startswith("text/") or mime in {
+        "application/json",
+        "application/xml",
+        "application/javascript",
+    }
+
+
+def safe_link_url(value):
+    try:
+        parsed = urlparse(str(value or "").strip())
+    except ValueError:
+        return ""
+
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return ""
+    hostname = (parsed.hostname or "").lower()
+    if hostname in {"localhost", "127.0.0.1", "::1"}:
+        return ""
+    try:
+        address = ipaddress.ip_address(hostname)
+        if address.is_private or address.is_loopback or address.is_link_local:
+            return ""
+    except ValueError:
+        pass
+    return parsed.geturl()
+
+
+def strip_html(value):
+    text = re.sub(r"(?is)<(script|style).*?>.*?</\1>", " ", value or "")
+    text = re.sub(r"(?s)<[^>]+>", " ", text)
+    return " ".join(text.split())
+
+
+def fetch_link_for_attachment(url):
+    request = Request(url, headers={"User-Agent": "VedAIChatbot/1.0"})
+    with urlopen(request, timeout=8) as response:
+        content_type = response.headers.get("Content-Type", "text/plain")
+        mime_type = content_type.split(";")[0].strip().lower() or "text/plain"
+        charset = response.headers.get_content_charset() or "utf-8"
+        payload = response.read(MAX_LINK_FETCH_BYTES + 1)
+
+    if len(payload) > MAX_LINK_FETCH_BYTES:
+        raise ValueError("Linked content is too large.")
+
+    if is_supported_inline_mime(mime_type):
+        return {"mimeType": mime_type, "bytes": payload}
+
+    if not is_text_mime(mime_type):
+        raise ValueError(f"Unsupported linked content type {mime_type}.")
+
+    text = payload.decode(charset, errors="replace")
+    if "html" in mime_type:
+        text = strip_html(text)
+    return {"mimeType": mime_type, "text": compact_text(text, MAX_ATTACHMENT_TEXT_CHARS)}
+
+
+def attachment_label(attachment):
+    return compact_text(
+        attachment.get("name") or attachment.get("url") or "attachment",
+        160,
+    )
+
+
+def build_attachment_context(attachments, types):
+    if not isinstance(attachments, list):
+        return "", []
+
+    context_lines = []
+    parts = []
+
+    for index, attachment in enumerate(attachments[:MAX_ATTACHMENTS], start=1):
+        if not isinstance(attachment, dict):
+            continue
+
+        attachment_type = attachment.get("type")
+        name = attachment_label(attachment)
+
+        if attachment_type == "text":
+            text = compact_text(attachment.get("text"), MAX_ATTACHMENT_TEXT_CHARS)
+            if text:
+                context_lines.append(f"Attachment {index} ({name}):\n{text}")
+            continue
+
+        if attachment_type == "link":
+            url = safe_link_url(attachment.get("url"))
+            if not url:
+                context_lines.append(f"Attachment {index}: skipped invalid link.")
+                continue
+
+            try:
+                linked = fetch_link_for_attachment(url)
+            except Exception as exc:
+                context_lines.append(f"Attachment {index} ({url}): could not fetch link: {exc}")
+                continue
+
+            if linked.get("bytes"):
+                parts.append(types.Part.from_bytes(
+                    data=linked["bytes"],
+                    mime_type=linked["mimeType"],
+                ))
+                context_lines.append(f"Attachment {index}: linked file from {url} ({linked['mimeType']}).")
+            elif linked.get("text"):
+                context_lines.append(f"Attachment {index}: linked page {url}\n{linked['text']}")
+            continue
+
+        if attachment_type == "inline":
+            mime_type = (attachment.get("mimeType") or "application/octet-stream").split(";")[0].strip().lower()
+            if not is_supported_inline_mime(mime_type):
+                context_lines.append(f"Attachment {index} ({name}): unsupported file type {mime_type}.")
+                continue
+
+            try:
+                file_bytes = base64.b64decode(attachment.get("data") or "", validate=True)
+            except (binascii.Error, ValueError):
+                context_lines.append(f"Attachment {index} ({name}): invalid file data.")
+                continue
+
+            if len(file_bytes) > MAX_INLINE_ATTACHMENT_BYTES:
+                context_lines.append(f"Attachment {index} ({name}): file is too large.")
+                continue
+
+            parts.append(types.Part.from_bytes(data=file_bytes, mime_type=mime_type))
+            context_lines.append(f"Attachment {index}: {name} ({mime_type}).")
+
+    if context_lines:
+        context_lines.insert(
+            0,
+            "Use the user's attachments below when they ask about files, images, documents, or links.",
+        )
+
+    return "\n\n".join(context_lines), parts
 
 
 def weather_code_description(code):
@@ -754,8 +913,11 @@ def chat():
     history = data.get("history") or []
     context_summary = data.get("contextSummary") or ""
     timezone_name = data.get("timezone") or "UTC"
+    attachments = data.get("attachments") or []
     if not isinstance(history, list):
         history = []
+    if not isinstance(attachments, list):
+        attachments = []
 
     if not user_message:
         return jsonify({"error": "Please type a message."}), 400
@@ -767,7 +929,7 @@ def chat():
             "searchHtml": "",
         })
 
-    local_reply = quick_local_reply(user_message, session.get("user", {}).get("name"))
+    local_reply = "" if attachments else quick_local_reply(user_message, session.get("user", {}).get("name"))
     if local_reply:
         return jsonify({
             "reply": local_reply,
@@ -775,7 +937,7 @@ def chat():
             "searchHtml": "",
         })
 
-    if is_weather_query(user_message):
+    if is_weather_query(user_message) and not attachments:
         try:
             weather_result = build_weather_forecast_reply(user_message)
         except Exception:
@@ -820,6 +982,15 @@ def chat():
                 "error": "The Gemini Python package is missing. Run pip install -r requirements.txt, then restart the server."
             }), 500
 
+        attachment_context, attachment_parts = build_attachment_context(attachments, types)
+        if attachment_context:
+            conversation.insert(-1, attachment_context)
+        gemini_contents = (
+            [*attachment_parts, "\n".join(conversation)]
+            if attachment_parts
+            else "\n".join(conversation)
+        )
+
         client = genai.Client(api_key=api_key)
         preferred_model = (os.getenv("GEMINI_MODEL") or "").strip()
         model_candidates = [
@@ -844,7 +1015,7 @@ def chat():
 
                 response = client.models.generate_content(
                     model=model,
-                    contents="\n".join(conversation),
+                    contents=gemini_contents,
                     config=types.GenerateContentConfig(**config_options),
                 )
                 break
