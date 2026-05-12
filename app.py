@@ -6,9 +6,11 @@ import os
 import re
 import time
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
+import xml.etree.ElementTree as ET
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from authlib.integrations.flask_client import OAuth
@@ -364,11 +366,23 @@ def asks_about_creator(message):
     return any(phrase in normalized for phrase in creator_phrases)
 
 
-def fetch_json(url, timeout=8):
-    request = Request(url, headers={"User-Agent": "VedAIChatbot/1.0"})
+def fetch_url_bytes(url, timeout=8):
+    request = Request(
+        url,
+        headers={
+            "Accept": "application/json, application/rss+xml, application/xml, text/xml, */*",
+            "Accept-Language": "en-IN,en;q=0.9",
+            "User-Agent": "VedAIChatbot/1.0 (+https://github.com/Vishal485947/ved-ai-chatbot)",
+        },
+    )
     with urlopen(request, timeout=timeout) as response:
         charset = response.headers.get_content_charset() or "utf-8"
-        return json.loads(response.read().decode(charset))
+        return response.read(), charset
+
+
+def fetch_json(url, timeout=8):
+    payload, charset = fetch_url_bytes(url, timeout=timeout)
+    return json.loads(payload.decode(charset))
 
 
 def is_supported_inline_mime(mime_type):
@@ -762,11 +776,115 @@ def extract_live_news_query(message):
     return compact_text(query or message or "breaking news", 180)
 
 
+def article_domain(url):
+    try:
+        hostname = urlparse(url).hostname or ""
+    except ValueError:
+        hostname = ""
+    return hostname.removeprefix("www.")
+
+
+def parse_rss_date(value):
+    if not value:
+        return ""
+    try:
+        date_value = parsedate_to_datetime(value)
+    except (TypeError, ValueError, IndexError, OverflowError):
+        return compact_text(value, 80)
+    return date_value.strftime("%Y-%m-%d %H:%M %Z").strip()
+
+
+def parse_news_rss(payload, max_records):
+    root = ET.fromstring(payload)
+    articles = []
+    seen = set()
+
+    for item in root.findall(".//item"):
+        title = compact_text(item.findtext("title"), 180)
+        link = (item.findtext("link") or "").strip()
+        if not title or not link:
+            continue
+
+        source_node = item.find("source")
+        source_name = compact_text(
+            source_node.text if source_node is not None else article_domain(link),
+            80,
+        )
+        dedupe_key = (title.lower(), link)
+        if dedupe_key in seen:
+            continue
+
+        articles.append({
+            "title": title,
+            "uri": link,
+            "domain": source_name or article_domain(link) or "Google News",
+            "seenDate": parse_rss_date(item.findtext("pubDate")),
+            "sourceCountry": "Google News",
+        })
+        seen.add(dedupe_key)
+
+        if len(articles) >= max_records:
+            break
+
+    return articles
+
+
+def google_news_rss_urls(query):
+    search_query = f"{query or 'India'} when:2d"
+    urls = [
+        "https://news.google.com/rss/search?"
+        + urlencode({
+            "q": search_query,
+            "hl": "en-IN",
+            "gl": "IN",
+            "ceid": "IN:en",
+        })
+    ]
+    if (query or "").strip().lower() in {"india", "indian", "bharat"}:
+        urls.append("https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en")
+    return urls
+
+
+def fetch_google_news_articles(query, max_records=5):
+    articles = []
+    source_urls = []
+    seen_links = set()
+
+    for rss_url in google_news_rss_urls(query):
+        try:
+            payload, _charset = fetch_url_bytes(rss_url, timeout=8)
+            feed_articles = parse_news_rss(payload, max_records=max_records)
+        except Exception:
+            continue
+
+        source_urls.append(rss_url)
+        for article in feed_articles:
+            if article["uri"] in seen_links:
+                continue
+            articles.append(article)
+            seen_links.add(article["uri"])
+            if len(articles) >= max_records:
+                break
+
+        if len(articles) >= max_records:
+            break
+
+    sources = [{"title": article["title"], "uri": article["uri"]} for article in articles]
+    if articles:
+        for source_url in source_urls[:2]:
+            sources.append({"title": "Google News RSS", "uri": source_url})
+
+    return articles, sources
+
+
 def fetch_live_news_articles(message, max_records=5):
     if not is_live_news_query(message):
         return "", [], []
 
     query = extract_live_news_query(message)
+    articles = []
+    sources = []
+
     gdelt_params = urlencode({
         "query": query,
         "mode": "ArtList",
@@ -776,9 +894,12 @@ def fetch_live_news_articles(message, max_records=5):
         "timespan": "2d",
     })
     gdelt_url = f"https://api.gdeltproject.org/api/v2/doc/doc?{gdelt_params}"
-    data = fetch_json(gdelt_url)
-    raw_articles = data.get("articles") or []
-    articles = []
+
+    try:
+        data = fetch_json(gdelt_url)
+        raw_articles = data.get("articles") or []
+    except Exception:
+        raw_articles = []
 
     for item in raw_articles[:max_records]:
         url = item.get("url")
@@ -793,9 +914,11 @@ def fetch_live_news_articles(message, max_records=5):
             "sourceCountry": item.get("sourcecountry") or item.get("sourceCountry") or "",
         })
 
-    sources = [{"title": article["title"], "uri": article["uri"]} for article in articles]
     if articles:
+        sources.extend({"title": article["title"], "uri": article["uri"]} for article in articles)
         sources.append({"title": "GDELT DOC 2.0", "uri": gdelt_url})
+    else:
+        articles, sources = fetch_google_news_articles(query, max_records=max_records)
 
     return query, articles, sources
 
@@ -994,6 +1117,11 @@ def chat():
     live_news_articles = []
     live_news_sources = []
     if is_live_news_query(user_message):
+        conversation.insert(
+            -1,
+            "Live/current-news request: use Google Search grounding and/or the live source context below. "
+            "Do not answer from static memory, do not say you lack real-time access, and include source-backed caution because headlines can change.",
+        )
         try:
             live_news_query, live_news_articles, live_news_sources = fetch_live_news_articles(user_message)
         except Exception:
