@@ -342,8 +342,10 @@ Current UTC date and time: {utc_now.strftime("%A, %B %d, %Y at %H:%M")} (UTC).
 If the user asks for today's date or current time, use the current date/time above.
 For normal questions, answer directly without needing live search. For current events,
 recent facts, news, prices, sports, releases, or anything likely to have changed
-recently, use Google Search grounding when available. Do not say your knowledge
-cutoff. Do not prefix replies with "Ved:".
+recently, use Google Search grounding or the provided live source context when
+available. Do not say you lack real-time access or mention a knowledge cutoff for
+these questions. If live source context is provided, summarize it with caution and
+include source-backed wording. Do not prefix replies with "Ved:".
 """
 
 
@@ -737,10 +739,22 @@ def is_live_news_query(message):
 
 
 def extract_live_news_query(message):
+    text = str(message or "")
+    focused_patterns = [
+        r"\b(?:latest|current|today'?s?|recent|breaking|live)?\s*(?:news|headlines|updates?)\s+(?:of|about|on|in|from|for)\s+(.+)",
+        r"\b(?:election results?|vote counts?|exit polls?|who won|winner|leading)\s+(?:of|about|in|from|for)?\s*(.+)",
+    ]
+    for pattern in focused_patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match and match.group(1).strip():
+            text = match.group(1)
+            break
+
+    text = re.sub(r"\bas\s+of\b.*$", " ", text, flags=re.IGNORECASE)
     text = re.sub(
-        r"\b(latest|current|today|now|right now|show me|tell me|give me|updates?|headlines?|news|breaking|live|please)\b",
+        r"\b(provide|please|me|with|the|latest|current|today'?s?|today|now|right now|show|tell|give|updates?|headlines?|news|breaking|live)\b",
         " ",
-        message,
+        text,
         flags=re.IGNORECASE,
     )
     text = re.sub(r"[^a-zA-Z0-9,\s-]", " ", text)
@@ -810,6 +824,24 @@ def format_live_news_fallback(query, articles):
         lines.append(f"{index}. {article['title']} ({source}, {seen})")
     lines.append("Open the source links for the latest details, because live news and election counts can change quickly.")
     return "\n".join(lines)
+
+
+def looks_like_no_live_access_reply(answer):
+    normalized = " ".join(str(answer or "").lower().split())
+    no_access_patterns = [
+        "do not have access to real-time",
+        "don't have access to real-time",
+        "do not have access to current",
+        "don't have access to current",
+        "knowledge isn't updated",
+        "knowledge is not updated",
+        "knowledge cutoff",
+        "cannot provide the latest news",
+        "can't provide the latest news",
+        "recommend checking",
+        "google news",
+    ]
+    return any(pattern in normalized for pattern in no_access_patterns)
 
 
 def quick_local_reply(message, user_name):
@@ -1048,10 +1080,15 @@ def chat():
                 "error": f"None of these Gemini models were available for your API key: {tried}. Open Google AI Studio, check the model list for your project, and put one supported text model in GEMINI_MODEL."
             }), 404
 
+        grounding = extract_grounding(response)
         answer = (response.text or "").strip()
         if not answer:
             answer = "I could not generate a reply for that. Please try asking another way."
-        grounding = extract_grounding(response)
+        if is_live_news_query(user_message) and looks_like_no_live_access_reply(answer):
+            if live_news_articles:
+                answer = format_live_news_fallback(live_news_query, live_news_articles)
+            elif not grounding.get("sources"):
+                answer = "I could not fetch fresh live news sources right now. Please try again in a minute."
         return jsonify({
             "reply": answer,
             "sources": merge_sources(grounding.get("sources"), live_news_sources),
