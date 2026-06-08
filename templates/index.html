@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ved AI Chatbot</title>
-  <meta name="ved-ui-version" content="drawer-sidebar-v1" />
+  <meta name="ved-ui-version" content="scrollable-home-v1" />
   <link rel="icon" href="{{ url_for('static', filename='ved-logo.svg') }}" type="image/svg+xml" />
   <style>
     * {
@@ -1685,6 +1685,219 @@
       color: #1d2230;
     }
 
+    .home-section {
+      width: min(1120px, calc(100% - 40px));
+      margin: 0 auto 54px;
+    }
+
+    .section-kicker {
+      margin: 0 0 10px;
+      color: var(--brand-dark);
+      font-size: 12px;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .section-heading {
+      max-width: 720px;
+      margin: 0;
+      color: #1d2230;
+      font-size: clamp(30px, 5vw, 54px);
+      line-height: 1.04;
+      font-weight: 820;
+    }
+
+    .section-copy {
+      max-width: 650px;
+      margin: 16px 0 0;
+      color: #687184;
+      font-size: 17px;
+      line-height: 1.65;
+    }
+
+    .capability-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 26px;
+    }
+
+    .capability-card {
+      min-height: 176px;
+      padding: 20px;
+      border: 1px solid rgba(108, 99, 255, 0.14);
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: 0 18px 48px rgba(38, 42, 74, 0.08);
+    }
+
+    .capability-icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 18px;
+      border-radius: 14px;
+      background: #f0edff;
+      color: var(--brand-dark);
+      font-weight: 900;
+    }
+
+    .capability-card h2,
+    .visual-card h2,
+    .detail-card h2 {
+      margin: 0 0 8px;
+      color: #202333;
+      font-size: 18px;
+      line-height: 1.25;
+    }
+
+    .capability-card p,
+    .visual-card p,
+    .detail-card p {
+      margin: 0;
+      color: #687184;
+      line-height: 1.55;
+    }
+
+    .visual-band {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(340px, 1.1fr);
+      gap: 26px;
+      align-items: stretch;
+      padding: 26px;
+      border: 1px solid rgba(108, 99, 255, 0.14);
+      border-radius: 32px;
+      background: rgba(255, 255, 255, 0.78);
+      box-shadow: 0 28px 80px rgba(38, 42, 74, 0.12);
+    }
+
+    .visual-copy {
+      align-self: center;
+      padding: clamp(8px, 3vw, 22px);
+    }
+
+    .visual-image {
+      position: relative;
+      min-height: 360px;
+      overflow: hidden;
+      border-radius: 26px;
+      background: #e9f2ff;
+    }
+
+    .visual-image img,
+    .picture-card img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .visual-overlay {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 18px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.52);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.86);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 18px 42px rgba(38, 42, 74, 0.16);
+    }
+
+    .visual-overlay strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #202333;
+    }
+
+    .visual-overlay span {
+      color: #687184;
+      line-height: 1.45;
+    }
+
+    .picture-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 26px;
+    }
+
+    .picture-card {
+      overflow: hidden;
+      border: 1px solid rgba(108, 99, 255, 0.14);
+      border-radius: 26px;
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: 0 18px 50px rgba(38, 42, 74, 0.08);
+    }
+
+    .picture-card img {
+      height: 190px;
+    }
+
+    .picture-card div {
+      padding: 18px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 26px;
+    }
+
+    .detail-card {
+      padding: 22px;
+      border: 1px solid rgba(108, 99, 255, 0.14);
+      border-radius: 26px;
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: 0 18px 50px rgba(38, 42, 74, 0.08);
+    }
+
+    .home-cta {
+      margin-bottom: 74px;
+      padding: clamp(28px, 6vw, 54px);
+      border-radius: 34px;
+      background: linear-gradient(135deg, #23263a 0%, #3a3270 52%, #116055 100%);
+      color: #ffffff;
+      box-shadow: 0 28px 82px rgba(38, 42, 74, 0.16);
+    }
+
+    .home-cta .section-kicker,
+    .home-cta .section-heading,
+    .home-cta .section-copy {
+      color: #ffffff;
+    }
+
+    .home-cta .section-copy {
+      color: #dce2f1;
+    }
+
+    .cta-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .secondary-link {
+      min-height: 52px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 18px;
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      border-radius: 16px;
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 850;
+    }
+
+    .secondary-link:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-1px);
+    }
+
     @media (max-width: 860px) {
       .app {
         grid-template-columns: 1fr;
@@ -1711,6 +1924,17 @@
 
       .main {
         min-height: 72vh;
+      }
+
+      .capability-grid,
+      .picture-grid,
+      .detail-grid,
+      .visual-band {
+        grid-template-columns: 1fr;
+      }
+
+      .visual-image {
+        min-height: 300px;
       }
     }
 
@@ -1747,6 +1971,25 @@
 
       .login-card h1 {
         font-size: 48px;
+      }
+
+      .home-section {
+        width: min(100% - 28px, 1120px);
+        margin-bottom: 38px;
+      }
+
+      .capability-card,
+      .detail-card {
+        padding: 18px;
+      }
+
+      .visual-band {
+        padding: 16px;
+        border-radius: 26px;
+      }
+
+      .picture-card img {
+        height: 170px;
       }
 
       .topbar {
@@ -1982,6 +2225,139 @@
             Built for focused conversations with saved history, Google login, and a cleaner chat experience.
           </p>
         </aside>
+      </section>
+
+      <section class="home-section" aria-labelledby="capabilities-title">
+        <p class="section-kicker">What Ved can do</p>
+        <h2 id="capabilities-title" class="section-heading">A smoother AI workspace for study, research, and everyday questions.</h2>
+        <p class="section-copy">
+          Ved combines chat, saved memory, real-time information, uploads, and project knowledge so the first screen is not just a login page. It explains, remembers, checks sources, and keeps useful work organized.
+        </p>
+        <div class="capability-grid">
+          <article class="capability-card">
+            <span class="capability-icon" aria-hidden="true">01</span>
+            <h2>Live answers</h2>
+            <p>Ask about weather, news, elections, prices, sports, releases, and other changing topics with source-backed fallbacks.</p>
+          </article>
+          <article class="capability-card">
+            <span class="capability-icon" aria-hidden="true">02</span>
+            <h2>Upload context</h2>
+            <p>Add images, documents, text files, or links and ask Ved questions based on what you shared.</p>
+          </article>
+          <article class="capability-card">
+            <span class="capability-icon" aria-hidden="true">03</span>
+            <h2>Projects</h2>
+            <p>Create focused spaces for school, coding, research, personal planning, and saved knowledge.</p>
+          </article>
+          <article class="capability-card">
+            <span class="capability-icon" aria-hidden="true">04</span>
+            <h2>Memory</h2>
+            <p>Tell Ved what to remember and it can use those saved facts in future replies when relevant.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="home-section visual-band" aria-labelledby="live-layer-title">
+        <div class="visual-copy">
+          <p class="section-kicker">Real-time layer</p>
+          <h2 id="live-layer-title" class="section-heading">Current information without raw error messages.</h2>
+          <p class="section-copy">
+            Ved routes live questions through weather APIs, news feeds, Google Search grounding, and fallback source lists. If one provider is busy, the answer stays readable and tells the user what happened.
+          </p>
+        </div>
+        <figure class="visual-image">
+          <img
+            src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80"
+            alt="A bright landscape suggesting live local weather and current conditions"
+            loading="lazy"
+            decoding="async"
+          />
+          <figcaption class="visual-overlay">
+            <strong>Weather, news, elections, and more</strong>
+            <span>Live topics use fresh context and source links wherever they are available.</span>
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="home-section" aria-labelledby="workflow-title">
+        <p class="section-kicker">Workspace flow</p>
+        <h2 id="workflow-title" class="section-heading">Built for the way a student or builder actually works.</h2>
+        <div class="picture-grid">
+          <article class="picture-card">
+            <img
+              src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=80"
+              alt="Clean desk workspace with laptop and notes"
+              loading="lazy"
+              decoding="async"
+            />
+            <div>
+              <h2>Study and planning</h2>
+              <p>Turn class notes, questions, and rough ideas into clear explanations and next steps.</p>
+            </div>
+          </article>
+          <article class="picture-card">
+            <img
+              src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=900&q=80"
+              alt="Analytics dashboard with charts and live data"
+              loading="lazy"
+              decoding="async"
+            />
+            <div>
+              <h2>Research with sources</h2>
+              <p>Ask current questions and review source links when Ved uses live information.</p>
+            </div>
+          </article>
+          <article class="picture-card">
+            <img
+              src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=80"
+              alt="Person working on a laptop with a focused digital workspace"
+              loading="lazy"
+              decoding="async"
+            />
+            <div>
+              <h2>Build and save</h2>
+              <p>Save useful replies as artifacts and reuse uploaded text as project knowledge.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="home-section" aria-labelledby="details-title">
+        <p class="section-kicker">More than a chat box</p>
+        <h2 id="details-title" class="section-heading">The interface now explains what Ved is before asking users to sign in.</h2>
+        <div class="detail-grid">
+          <article class="detail-card">
+            <h2>Accessible controls</h2>
+            <p>Buttons use clear labels, visible focus states, and simpler shapes so the app is easier to navigate on desktop and mobile.</p>
+          </article>
+          <article class="detail-card">
+            <h2>Private workspace feel</h2>
+            <p>Google sign-in keeps the app personal, while projects, memory, and artifacts make conversations feel organized.</p>
+          </article>
+          <article class="detail-card">
+            <h2>Cleaner first impression</h2>
+            <p>The page now scrolls like a real product website with visual sections instead of ending after the first hero panel.</p>
+          </article>
+          <article class="detail-card">
+            <h2>Ready for future upgrades</h2>
+            <p>This structure can later support testimonials, pricing, screenshots, documentation, or a full public landing page.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="home-section home-cta" aria-labelledby="home-cta-title">
+        <p class="section-kicker">Start with Ved</p>
+        <h2 id="home-cta-title" class="section-heading">Sign in once. Keep your AI workspace ready.</h2>
+        <p class="section-copy">
+          Use Ved for homework, coding questions, current information, image/document review, and saved project knowledge.
+        </p>
+        <div class="cta-actions">
+          <a class="google-button" href="{{ url_for('login') }}">
+            <span class="google-logo" aria-hidden="true"></span>
+            Continue with Google
+          </a>
+          <a class="secondary-link" href="{{ url_for('login') }}">Open Ved</a>
+        </div>
       </section>
     </main>
   {% else %}
