@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ved AI Chatbot</title>
-  <meta name="ved-ui-version" content="uizard-inspired-realtime-v1" />
+  <meta name="ved-ui-version" content="drawer-sidebar-v1" />
   <link rel="icon" href="{{ url_for('static', filename='ved-logo.svg') }}" type="image/svg+xml" />
   <style>
     * {
@@ -1785,6 +1785,126 @@
         grid-column: 1 / -1;
       }
     }
+
+    .app {
+      grid-template-columns: 1fr;
+      overflow-x: hidden;
+    }
+
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 50;
+      width: min(318px, calc(100vw - 34px));
+      min-height: 100dvh;
+      transform: translateX(-108%);
+      transition: transform 0.24s ease, box-shadow 0.24s ease;
+    }
+
+    .app.sidebar-open .sidebar {
+      transform: translateX(0);
+      box-shadow: 28px 0 70px rgba(38, 42, 74, 0.18);
+    }
+
+    .sidebar-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 45;
+      border: 0;
+      background: rgba(25, 29, 48, 0.3);
+      opacity: 0;
+      pointer-events: none;
+      backdrop-filter: blur(2px);
+      transition: opacity 0.2s ease;
+    }
+
+    .app.sidebar-open .sidebar-backdrop {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .sidebar-toggle,
+    .sidebar-close {
+      display: inline-grid;
+      place-items: center;
+      border: 1px solid #e1dcf4;
+      background: rgba(255, 255, 255, 0.84);
+      color: #3f4658;
+      box-shadow: 0 10px 24px rgba(38, 42, 74, 0.08);
+      cursor: pointer;
+    }
+
+    .sidebar-toggle {
+      width: 44px;
+      height: 44px;
+      flex: 0 0 auto;
+      gap: 4px;
+      border-radius: 15px;
+    }
+
+    .sidebar-toggle span {
+      width: 18px;
+      height: 2px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+
+    .sidebar-toggle:hover,
+    .sidebar-close:hover {
+      border-color: rgba(108, 99, 255, 0.35);
+      background: #ffffff;
+      color: var(--brand-dark);
+      box-shadow: 0 14px 30px rgba(108, 99, 255, 0.14);
+      transform: translateY(-1px);
+    }
+
+    .sidebar-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .brand {
+      padding-right: 64px;
+    }
+
+    .topbar {
+      display: flex;
+      gap: 14px;
+    }
+
+    .delete-chat-button,
+    .attachment-chip button {
+      display: inline-grid;
+      place-items: center;
+      color: #7c8495;
+    }
+
+    .delete-icon {
+      font-size: 21px;
+      line-height: 1;
+    }
+
+    .attachment-chip button .delete-icon {
+      font-size: 17px;
+    }
+
+    @media (max-width: 560px) {
+      .topbar {
+        display: flex;
+        align-items: stretch;
+      }
+
+      .sidebar-toggle {
+        width: 42px;
+        height: 42px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1865,8 +1985,25 @@
       </section>
     </main>
   {% else %}
-    <div class="app">
-      <aside class="sidebar">
+    <div id="appShell" class="app">
+      <button
+        id="sidebarBackdrop"
+        class="sidebar-backdrop"
+        type="button"
+        aria-label="Close conversations sidebar"
+        tabindex="-1"
+      ></button>
+
+      <aside id="appSidebar" class="sidebar" aria-label="Conversations sidebar">
+        <button
+          id="sidebarCloseButton"
+          class="sidebar-close"
+          type="button"
+          aria-label="Close conversations sidebar"
+          title="Close sidebar"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
         <section class="brand">
           <div class="brand-lockup">
             <img class="ved-logo small" src="{{ url_for('static', filename='ved-logo.svg') }}" alt="Ved logo" />
@@ -1912,6 +2049,19 @@
 
       <main class="main">
         <header class="topbar">
+          <button
+            id="sidebarToggle"
+            class="sidebar-toggle"
+            type="button"
+            aria-label="Open conversations sidebar"
+            aria-controls="appSidebar"
+            aria-expanded="false"
+            title="Open conversations"
+          >
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+          </button>
           <div>
             <h2>Welcome, {{ user.name }}</h2>
             <p>Continue where you left off.</p>
@@ -2003,6 +2153,11 @@
 
     if (currentUser && currentUser.email) {
       const chatForm = document.querySelector("#chatForm");
+      const appShell = document.querySelector("#appShell");
+      const appSidebar = document.querySelector("#appSidebar");
+      const sidebarToggle = document.querySelector("#sidebarToggle");
+      const sidebarBackdrop = document.querySelector("#sidebarBackdrop");
+      const sidebarCloseButton = document.querySelector("#sidebarCloseButton");
       const messageInput = document.querySelector("#messageInput");
       const chatMessages = document.querySelector("#chatMessages");
       const conversationList = document.querySelector("#conversationList");
@@ -2052,6 +2207,31 @@
       renderPendingAttachments();
       setupVoiceInput();
       loadWorkspace();
+      closeSidebar();
+
+      sidebarToggle.addEventListener("click", () => {
+        if (appShell.classList.contains("sidebar-open")) {
+          closeSidebar();
+        } else {
+          openSidebar();
+        }
+      });
+
+      sidebarCloseButton.addEventListener("click", () => {
+        closeSidebar();
+        sidebarToggle.focus();
+      });
+      sidebarBackdrop.addEventListener("click", () => {
+        closeSidebar();
+        sidebarToggle.focus();
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && appShell.classList.contains("sidebar-open")) {
+          closeSidebar();
+          sidebarToggle.focus();
+        }
+      });
 
       newChatButton.addEventListener("click", () => {
         const conversation = createConversation();
@@ -2059,6 +2239,7 @@
         saveConversations();
         renderConversationList();
         renderMessages();
+        closeSidebar();
         messageInput.focus();
       });
 
@@ -2381,6 +2562,21 @@
         }
       });
 
+      function openSidebar() {
+        appShell.classList.add("sidebar-open");
+        appSidebar.inert = false;
+        appSidebar.setAttribute("aria-hidden", "false");
+        sidebarToggle.setAttribute("aria-expanded", "true");
+        sidebarCloseButton.focus();
+      }
+
+      function closeSidebar() {
+        appShell.classList.remove("sidebar-open");
+        appSidebar.inert = true;
+        appSidebar.setAttribute("aria-hidden", "true");
+        sidebarToggle.setAttribute("aria-expanded", "false");
+      }
+
       async function apiRequest(url, options = {}) {
         const response = await fetch(url, {
           ...options,
@@ -2643,7 +2839,8 @@
           const removeButton = document.createElement("button");
           removeButton.type = "button";
           removeButton.setAttribute("aria-label", `Remove ${label.textContent}`);
-          removeButton.textContent = "Del";
+          removeButton.title = `Remove ${label.textContent}`;
+          removeButton.innerHTML = '<span class="delete-icon" aria-hidden="true">&times;</span>';
           removeButton.addEventListener("click", () => {
             pendingAttachments = pendingAttachments.filter((item) => item.id !== attachment.id);
             renderPendingAttachments();
@@ -3117,6 +3314,7 @@
               loadWorkspace();
               renderConversationList();
               renderMessages();
+              closeSidebar();
             });
 
             const deleteButton = document.createElement("button");
@@ -3124,7 +3322,7 @@
             deleteButton.className = "delete-chat-button";
             deleteButton.title = `Delete ${conversation.title}`;
             deleteButton.setAttribute("aria-label", `Delete conversation ${conversation.title}`);
-            deleteButton.textContent = "Del";
+            deleteButton.innerHTML = '<span class="delete-icon" aria-hidden="true">&times;</span>';
             deleteButton.addEventListener("click", () => {
               deleteConversation(conversation.id, true);
             });
