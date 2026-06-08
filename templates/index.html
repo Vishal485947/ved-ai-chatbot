@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ved AI Chatbot</title>
-  <meta name="ved-ui-version" content="professional-answers-v1" />
+  <meta name="ved-ui-version" content="mobile-responsive-v1" />
   <link rel="icon" href="{{ url_for('static', filename='ved-logo.svg') }}" type="image/svg+xml" />
   <style>
     * {
@@ -2321,6 +2321,355 @@
       .sidebar-toggle {
         width: 46px;
         height: 46px;
+      }
+    }
+
+    @media (max-width: 700px) {
+      html,
+      body {
+        width: 100%;
+        overflow-x: hidden;
+      }
+
+      body {
+        min-height: 100dvh;
+      }
+
+      .login-announcement {
+        align-items: flex-start;
+        gap: 8px 10px;
+        padding: 10px 14px;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .login-announcement a {
+        min-height: 34px;
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .login-nav {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        min-height: 62px;
+        padding: 0 14px;
+      }
+
+      .login-nav-brand {
+        font-size: 16px;
+      }
+
+      .login-nav-cta {
+        min-height: 38px;
+        padding: 0 12px;
+        font-size: 11px;
+      }
+
+      .login-stage,
+      .home-section {
+        width: calc(100% - 24px);
+      }
+
+      .login-stage {
+        margin: 18px auto 32px;
+        border-radius: 26px;
+      }
+
+      .login-card {
+        padding: 24px;
+      }
+
+      .login-mark {
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+
+      .login-card h1 {
+        font-size: clamp(38px, 14vw, 54px);
+        line-height: 1.04;
+      }
+
+      .login-copy,
+      .section-copy {
+        font-size: 15px;
+        line-height: 1.58;
+      }
+
+      .google-button,
+      .secondary-link {
+        width: 100%;
+        min-height: 50px;
+      }
+
+      .login-badges {
+        gap: 8px;
+      }
+
+      .login-badge {
+        min-height: 34px;
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .preview-panel {
+        padding: 18px;
+      }
+
+      .preview-shell {
+        border-radius: 22px;
+      }
+
+      .preview-message {
+        max-width: 100%;
+        font-size: 13px;
+      }
+
+      .section-heading {
+        font-size: clamp(28px, 10vw, 40px);
+      }
+
+      .capability-grid,
+      .picture-grid,
+      .detail-grid,
+      .visual-band {
+        grid-template-columns: 1fr;
+      }
+
+      .capability-card,
+      .detail-card,
+      .picture-card {
+        border-radius: 22px;
+      }
+
+      .visual-band {
+        gap: 16px;
+      }
+
+      .visual-image {
+        min-height: 260px;
+        border-radius: 22px;
+      }
+
+      .visual-overlay {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        border-radius: 18px;
+      }
+
+      .home-cta {
+        margin-bottom: 36px;
+        border-radius: 26px;
+      }
+
+      .cta-actions {
+        flex-direction: column;
+      }
+
+      .home-footer {
+        border-top-width: 10px;
+      }
+
+      .home-footer-inner {
+        width: calc(100% - 24px);
+        gap: 24px;
+        padding: 32px 0;
+      }
+
+      .footer-brand {
+        align-items: flex-start;
+      }
+
+      .footer-contact-list a,
+      .footer-contact-list span {
+        width: 100%;
+        min-height: 42px;
+      }
+
+      .footer-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .footer-action {
+        width: 100%;
+        min-height: 46px;
+        padding: 0 10px;
+      }
+
+      .app {
+        min-height: 100dvh;
+      }
+
+      .sidebar {
+        width: min(336px, calc(100vw - 18px));
+      }
+
+      .sidebar-toggle {
+        width: 48px;
+        height: 48px;
+        border-radius: 17px;
+      }
+
+      .topbar {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: start;
+        gap: 12px;
+        padding: 12px;
+      }
+
+      .topbar > div:first-of-type {
+        min-width: 0;
+      }
+
+      .topbar h2 {
+        overflow-wrap: anywhere;
+        font-size: 16px;
+      }
+
+      .topbar p {
+        font-size: 13px;
+      }
+
+      .topbar-actions {
+        grid-column: 1 / -1;
+        width: 100%;
+        justify-content: stretch;
+      }
+
+      .workspace-tools {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .workspace-select {
+        grid-column: 1 / -1;
+        width: 100%;
+        max-width: none;
+      }
+
+      .workspace-button,
+      .delete-current,
+      .status {
+        min-height: 42px;
+        justify-content: center;
+        text-align: center;
+        font-size: 12px;
+      }
+
+      .delete-current,
+      .status {
+        flex: 1 1 132px;
+      }
+
+      .messages {
+        width: calc(100% - 20px);
+        padding: 18px 0 12px;
+        gap: 12px;
+      }
+
+      .main.is-empty .messages {
+        justify-content: center;
+        padding-bottom: 12px;
+      }
+
+      .welcome-panel h2 {
+        display: flex;
+        flex-wrap: wrap;
+        font-size: clamp(30px, 10vw, 42px);
+      }
+
+      .prompt-pills {
+        gap: 8px;
+      }
+
+      .prompt-pill {
+        min-height: 40px;
+      }
+
+      .message {
+        max-width: 96%;
+        padding: 13px 14px;
+        border-radius: 18px;
+        font-size: 15px;
+      }
+
+      .source-list,
+      .message-attachments {
+        gap: 7px;
+      }
+
+      .source-link {
+        max-width: 100%;
+      }
+
+      .composer {
+        width: calc(100% - 20px);
+        margin-bottom: max(14px, env(safe-area-inset-bottom));
+        padding: 10px;
+        border-radius: 24px;
+      }
+
+      .composer-row {
+        grid-template-columns: 42px 64px minmax(0, 1fr) 42px;
+        gap: 7px;
+      }
+
+      .composer input[type="text"] {
+        min-width: 0;
+        min-height: 46px;
+        padding: 0 8px;
+        font-size: 15px;
+      }
+
+      .tool-button,
+      .voice-button,
+      .send-button {
+        min-height: 42px;
+      }
+
+      .voice-button {
+        min-width: 42px;
+        padding: 0;
+      }
+
+      .send-button {
+        grid-column: 1 / -1;
+        min-height: 46px;
+      }
+
+      .attachment-list {
+        max-height: 92px;
+        overflow-y: auto;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .workspace-tools {
+        grid-template-columns: 1fr;
+      }
+
+      .footer-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .composer-row {
+        grid-template-columns: 40px 58px minmax(0, 1fr) 40px;
+      }
+
+      .login-card {
+        padding: 20px;
+      }
+
+      .footer-brand img {
+        width: 48px;
+        height: 48px;
       }
     }
   </style>
