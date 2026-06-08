@@ -4,7 +4,9 @@ import ipaddress
 import json
 import os
 import re
+import sqlite3
 import time
+import uuid
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -24,6 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent
 ENV_FILE = BASE_DIR / ".env"
 
 load_dotenv(ENV_FILE)
+DATA_DB = Path(os.getenv("VED_DATA_PATH", BASE_DIR / "ved_data.sqlite3"))
 
 app = Flask(
     __name__,
@@ -76,6 +79,367 @@ SUPPORTED_INLINE_MIME_TYPES = {
     "image/heif",
     "application/pdf",
 }
+
+
+def utc_timestamp():
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def new_id():
+    return uuid.uuid4().hex
+
+
+def db_connect():
+    DATA_DB.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(DATA_DB)
+    connection.row_factory = sqlite3.Row
+    return connection
+
+
+def init_db():
+    with db_connect() as connection:
+        connection.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS memories (
+                id TEXT PRIMARY KEY,
+                user_email TEXT NOT NULL,
+                note TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS projects (
+                id TEXT PRIMARY KEY,
+                user_email TEXT NOT NULL,
+                name TEXT NOT NULL,
+                instructions TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS knowledge_items (
+                id TEXT PRIMARY KEY,
+                user_email TEXT NOT NULL,
+                project_id TEXT NOT NULL DEFAULT '',
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                source TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS artifacts (
+                id TEXT PRIMARY KEY,
+                user_email TEXT NOT NULL,
+                project_id TEXT NOT NULL DEFAULT '',
+                title TEXT NOT NULL,
+                kind TEXT NOT NULL DEFAULT 'note',
+                content TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_email);
+            CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_email);
+            CREATE INDEX IF NOT EXISTS idx_knowledge_user_project ON knowledge_items(user_email, project_id);
+            CREATE INDEX IF NOT EXISTS idx_artifacts_user_project ON artifacts(user_email, project_id);
+            """
+        )
+
+
+def row_to_dict(row):
+    return dict(row) if row else {}
+
+
+def current_user_email():
+    return (session.get("user") or {}).get("email") or ""
+
+
+def require_user_email():
+    email = current_user_email()
+    if not email:
+        return ""
+    return email
+
+
+def clean_record_id(value):
+    value = str(value or "").strip()
+    return value if re.fullmatch(r"[A-Za-z0-9_-]{1,80}", value) else ""
+
+
+def normalize_project_id(value):
+    return clean_record_id(value)
+
+
+def tokenize_for_retrieval(value):
+    stop_words = {
+        "a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "how",
+        "i", "in", "is", "it", "me", "my", "of", "on", "or", "that", "the",
+        "this", "to", "what", "when", "where", "which", "who", "why", "with",
+        "you", "your",
+    }
+    return {
+        token
+        for token in re.findall(r"[a-zA-Z0-9]{3,}", str(value or "").lower())
+        if token not in stop_words
+    }
+
+
+def list_memories(email, limit=20):
+    with db_connect() as connection:
+        rows = connection.execute(
+            """
+            SELECT id, note, created_at AS createdAt, updated_at AS updatedAt
+            FROM memories
+            WHERE user_email = ?
+            ORDER BY updated_at DESC
+            LIMIT ?
+            """,
+            (email, limit),
+        ).fetchall()
+    return [row_to_dict(row) for row in rows]
+
+
+def add_memory(email, note):
+    note = compact_text(note, 500)
+    if not note:
+        return {}
+
+    now = utc_timestamp()
+    memory = {
+        "id": new_id(),
+        "note": note,
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    with db_connect() as connection:
+        connection.execute(
+            """
+            INSERT INTO memories(id, user_email, note, created_at, updated_at)
+            VALUES(?, ?, ?, ?, ?)
+            """,
+            (memory["id"], email, note, now, now),
+        )
+    return memory
+
+
+def maybe_extract_memory_note(message):
+    text = compact_text(message, 600)
+    patterns = [
+        r"\bremember\s+that\s+(.+)",
+        r"\bremember\s+(.+)",
+        r"\bplease\s+remember\s+that\s+(.+)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            note = match.group(1).strip(" .")
+            if 4 <= len(note) <= 500:
+                return note
+    return ""
+
+
+def build_memory_context(email):
+    memories = list_memories(email, limit=12)
+    if not memories:
+        return ""
+
+    lines = ["Saved user memory. Use these facts only when relevant:"]
+    lines.extend(f"- {memory['note']}" for memory in memories if memory.get("note"))
+    return "\n".join(lines)
+
+
+def get_project(email, project_id):
+    project_id = normalize_project_id(project_id)
+    if not project_id:
+        return {}
+    with db_connect() as connection:
+        row = connection.execute(
+            """
+            SELECT id, name, instructions, created_at AS createdAt, updated_at AS updatedAt
+            FROM projects
+            WHERE user_email = ? AND id = ?
+            """,
+            (email, project_id),
+        ).fetchone()
+    return row_to_dict(row)
+
+
+def list_projects(email):
+    with db_connect() as connection:
+        rows = connection.execute(
+            """
+            SELECT id, name, instructions, created_at AS createdAt, updated_at AS updatedAt
+            FROM projects
+            WHERE user_email = ?
+            ORDER BY updated_at DESC
+            """,
+            (email,),
+        ).fetchall()
+    return [row_to_dict(row) for row in rows]
+
+
+def add_project(email, name, instructions=""):
+    name = compact_text(name, 80) or "New project"
+    instructions = compact_text(instructions, 1000)
+    now = utc_timestamp()
+    project = {
+        "id": new_id(),
+        "name": name,
+        "instructions": instructions,
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    with db_connect() as connection:
+        connection.execute(
+            """
+            INSERT INTO projects(id, user_email, name, instructions, created_at, updated_at)
+            VALUES(?, ?, ?, ?, ?, ?)
+            """,
+            (project["id"], email, name, instructions, now, now),
+        )
+    return project
+
+
+def list_knowledge(email, project_id="", limit=40):
+    project_id = normalize_project_id(project_id)
+    with db_connect() as connection:
+        rows = connection.execute(
+            """
+            SELECT id, project_id AS projectId, title, source, created_at AS createdAt, updated_at AS updatedAt,
+                   length(content) AS contentLength
+            FROM knowledge_items
+            WHERE user_email = ? AND project_id = ?
+            ORDER BY updated_at DESC
+            LIMIT ?
+            """,
+            (email, project_id, limit),
+        ).fetchall()
+    return [row_to_dict(row) for row in rows]
+
+
+def add_knowledge(email, project_id, title, content, source=""):
+    project_id = normalize_project_id(project_id)
+    content = compact_text(content, 25000)
+    if not content:
+        return {}
+
+    now = utc_timestamp()
+    item = {
+        "id": new_id(),
+        "projectId": project_id,
+        "title": compact_text(title, 140) or "Knowledge note",
+        "source": compact_text(source, 240),
+        "contentLength": len(content),
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    with db_connect() as connection:
+        connection.execute(
+            """
+            INSERT INTO knowledge_items(id, user_email, project_id, title, content, source, created_at, updated_at)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (item["id"], email, project_id, item["title"], content, item["source"], now, now),
+        )
+    return item
+
+
+def retrieve_knowledge_context(email, project_id, query):
+    project_id = normalize_project_id(project_id)
+    query_tokens = tokenize_for_retrieval(query)
+    if not query_tokens:
+        return ""
+
+    with db_connect() as connection:
+        rows = connection.execute(
+            """
+            SELECT title, content, source
+            FROM knowledge_items
+            WHERE user_email = ? AND project_id = ?
+            ORDER BY updated_at DESC
+            LIMIT 80
+            """,
+            (email, project_id),
+        ).fetchall()
+
+    scored = []
+    for row in rows:
+        searchable = f"{row['title']} {row['content']}"
+        tokens = tokenize_for_retrieval(searchable)
+        score = len(query_tokens & tokens)
+        if score:
+            scored.append((score, row))
+
+    if not scored:
+        return ""
+
+    scored.sort(key=lambda item: item[0], reverse=True)
+    lines = ["Relevant saved project knowledge. Prefer this context when it answers the user:"]
+    total_chars = 0
+    for _score, row in scored[:4]:
+        snippet = compact_text(row["content"], 1600)
+        total_chars += len(snippet)
+        source = f" Source: {row['source']}." if row["source"] else ""
+        lines.append(f"- {row['title']}.{source}\n  {snippet}")
+        if total_chars >= 4500:
+            break
+    return "\n".join(lines)
+
+
+def list_artifacts(email, project_id="", limit=30):
+    project_id = normalize_project_id(project_id)
+    with db_connect() as connection:
+        rows = connection.execute(
+            """
+            SELECT id, project_id AS projectId, title, kind, content, created_at AS createdAt, updated_at AS updatedAt
+            FROM artifacts
+            WHERE user_email = ? AND project_id = ?
+            ORDER BY updated_at DESC
+            LIMIT ?
+            """,
+            (email, project_id, limit),
+        ).fetchall()
+    return [row_to_dict(row) for row in rows]
+
+
+def add_artifact(email, project_id, title, content, kind="note"):
+    project_id = normalize_project_id(project_id)
+    content = compact_text(content, 30000)
+    if not content:
+        return {}
+
+    now = utc_timestamp()
+    artifact = {
+        "id": new_id(),
+        "projectId": project_id,
+        "title": compact_text(title, 140) or "Ved artifact",
+        "kind": compact_text(kind, 40) or "note",
+        "content": content,
+        "createdAt": now,
+        "updatedAt": now,
+    }
+    with db_connect() as connection:
+        connection.execute(
+            """
+            INSERT INTO artifacts(id, user_email, project_id, title, kind, content, created_at, updated_at)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                artifact["id"],
+                email,
+                project_id,
+                artifact["title"],
+                artifact["kind"],
+                content,
+                now,
+                now,
+            ),
+        )
+    return artifact
+
+
+init_db()
 
 
 def visitor_ip():
@@ -1048,12 +1412,158 @@ def logout():
     return redirect(url_for("home"))
 
 
+@app.get("/api/workspace")
+def workspace_snapshot():
+    email = require_user_email()
+    if not email:
+        return jsonify({"error": "Please log in first."}), 401
+
+    project_id = normalize_project_id(request.args.get("projectId"))
+    return jsonify({
+        "projects": list_projects(email),
+        "memories": list_memories(email),
+        "knowledge": list_knowledge(email, project_id),
+        "artifacts": list_artifacts(email, project_id),
+    })
+
+
+@app.post("/api/projects")
+def create_project_api():
+    email = require_user_email()
+    if not email:
+        return jsonify({"error": "Please log in first."}), 401
+
+    data = request.get_json(silent=True) or {}
+    project = add_project(
+        email,
+        data.get("name") or "New project",
+        data.get("instructions") or "",
+    )
+    return jsonify({"project": project})
+
+
+@app.post("/api/memories")
+def create_memory_api():
+    email = require_user_email()
+    if not email:
+        return jsonify({"error": "Please log in first."}), 401
+
+    data = request.get_json(silent=True) or {}
+    memory = add_memory(email, data.get("note") or "")
+    if not memory:
+        return jsonify({"error": "Memory note is empty."}), 400
+    return jsonify({"memory": memory})
+
+
+@app.delete("/api/memories/<memory_id>")
+def delete_memory_api(memory_id):
+    email = require_user_email()
+    if not email:
+        return jsonify({"error": "Please log in first."}), 401
+
+    with db_connect() as connection:
+        connection.execute(
+            "DELETE FROM memories WHERE user_email = ? AND id = ?",
+            (email, clean_record_id(memory_id)),
+        )
+    return jsonify({"ok": True})
+
+
+@app.get("/api/knowledge")
+def list_knowledge_api():
+    email = require_user_email()
+    if not email:
+        return jsonify({"error": "Please log in first."}), 401
+
+    return jsonify({
+        "knowledge": list_knowledge(email, request.args.get("projectId")),
+    })
+
+
+@app.post("/api/knowledge")
+def create_knowledge_api():
+    email = require_user_email()
+    if not email:
+        return jsonify({"error": "Please log in first."}), 401
+
+    data = request.get_json(silent=True) or {}
+    item = add_knowledge(
+        email,
+        data.get("projectId"),
+        data.get("title") or "Knowledge note",
+        data.get("content") or "",
+        data.get("source") or "",
+    )
+    if not item:
+        return jsonify({"error": "Knowledge content is empty."}), 400
+    return jsonify({"item": item})
+
+
+@app.delete("/api/knowledge/<knowledge_id>")
+def delete_knowledge_api(knowledge_id):
+    email = require_user_email()
+    if not email:
+        return jsonify({"error": "Please log in first."}), 401
+
+    with db_connect() as connection:
+        connection.execute(
+            "DELETE FROM knowledge_items WHERE user_email = ? AND id = ?",
+            (email, clean_record_id(knowledge_id)),
+        )
+    return jsonify({"ok": True})
+
+
+@app.get("/api/artifacts")
+def list_artifacts_api():
+    email = require_user_email()
+    if not email:
+        return jsonify({"error": "Please log in first."}), 401
+
+    return jsonify({
+        "artifacts": list_artifacts(email, request.args.get("projectId")),
+    })
+
+
+@app.post("/api/artifacts")
+def create_artifact_api():
+    email = require_user_email()
+    if not email:
+        return jsonify({"error": "Please log in first."}), 401
+
+    data = request.get_json(silent=True) or {}
+    artifact = add_artifact(
+        email,
+        data.get("projectId"),
+        data.get("title") or "Ved artifact",
+        data.get("content") or "",
+        data.get("kind") or "note",
+    )
+    if not artifact:
+        return jsonify({"error": "Artifact content is empty."}), 400
+    return jsonify({"artifact": artifact})
+
+
+@app.delete("/api/artifacts/<artifact_id>")
+def delete_artifact_api(artifact_id):
+    email = require_user_email()
+    if not email:
+        return jsonify({"error": "Please log in first."}), 401
+
+    with db_connect() as connection:
+        connection.execute(
+            "DELETE FROM artifacts WHERE user_email = ? AND id = ?",
+            (email, clean_record_id(artifact_id)),
+        )
+    return jsonify({"ok": True})
+
+
 @app.post("/chat")
 def chat():
     if not session.get("user"):
         return jsonify({
             "error": "Please log in with Google before chatting with Ved."
         }), 401
+    email = require_user_email()
 
     load_dotenv(ENV_FILE, override=True)
     api_key = (os.getenv("GEMINI_API_KEY") or "").strip()
@@ -1069,6 +1579,7 @@ def chat():
     context_summary = data.get("contextSummary") or ""
     timezone_name = data.get("timezone") or "UTC"
     attachments = data.get("attachments") or []
+    project_id = normalize_project_id(data.get("projectId"))
     if not isinstance(history, list):
         history = []
     if not isinstance(attachments, list):
@@ -1077,11 +1588,17 @@ def chat():
     if not user_message:
         return jsonify({"error": "Please type a message."}), 400
 
+    saved_memory = {}
+    memory_note = maybe_extract_memory_note(user_message)
+    if memory_note:
+        saved_memory = add_memory(email, memory_note)
+
     if asks_about_creator(user_message):
         return jsonify({
             "reply": "My creator is Vishal Raj,a student of class X B  SPSTDSC",
             "sources": [],
             "searchHtml": "",
+            "memorySaved": saved_memory,
         })
 
     local_reply = "" if attachments else quick_local_reply(user_message, session.get("user", {}).get("name"))
@@ -1090,6 +1607,7 @@ def chat():
             "reply": local_reply,
             "sources": [],
             "searchHtml": "",
+            "memorySaved": saved_memory,
         })
 
     if is_weather_query(user_message) and not attachments:
@@ -1105,6 +1623,7 @@ def chat():
             "reply": weather_result["reply"],
             "sources": weather_result.get("sources", []),
             "searchHtml": "",
+            "memorySaved": saved_memory,
         })
 
     if rate_limit_exceeded():
@@ -1113,6 +1632,21 @@ def chat():
         }), 429
 
     conversation = build_conversation_context(history, user_message, context_summary)
+    project = get_project(email, project_id)
+    if project:
+        project_lines = [f"Active project: {project.get('name')}."]
+        if project.get("instructions"):
+            project_lines.append(f"Project instructions: {project['instructions']}")
+        conversation.insert(-1, "\n".join(project_lines))
+
+    memory_context = build_memory_context(email)
+    if memory_context:
+        conversation.insert(-1, memory_context)
+
+    knowledge_context = retrieve_knowledge_context(email, project_id, user_message)
+    if knowledge_context:
+        conversation.insert(-1, knowledge_context)
+
     live_news_query = ""
     live_news_articles = []
     live_news_sources = []
@@ -1197,6 +1731,7 @@ def chat():
                         "reply": format_live_news_fallback(live_news_query, live_news_articles),
                         "sources": live_news_sources,
                         "searchHtml": "",
+                        "memorySaved": saved_memory,
                     })
 
                 return jsonify({
@@ -1221,6 +1756,7 @@ def chat():
             "reply": answer,
             "sources": merge_sources(grounding.get("sources"), live_news_sources),
             "searchHtml": grounding.get("searchHtml", ""),
+            "memorySaved": saved_memory,
         })
     except Exception as exc:
         error_text = str(exc).lower()
@@ -1240,6 +1776,7 @@ def chat():
                     "reply": format_live_news_fallback(live_news_query, live_news_articles),
                     "sources": live_news_sources,
                     "searchHtml": "",
+                    "memorySaved": saved_memory,
                 })
 
             return jsonify({

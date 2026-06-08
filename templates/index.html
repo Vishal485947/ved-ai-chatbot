@@ -330,6 +330,45 @@
       gap: 10px;
     }
 
+    .workspace-tools {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .workspace-select,
+    .workspace-button {
+      min-height: 36px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: #eef4ff;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .workspace-select {
+      max-width: 170px;
+      padding: 0 28px 0 12px;
+    }
+
+    .workspace-select option {
+      color: #101826;
+    }
+
+    .workspace-button {
+      padding: 0 12px;
+      cursor: pointer;
+    }
+
+    .workspace-button:hover {
+      border-color: var(--brand);
+      background: rgba(255, 122, 26, 0.1);
+    }
+
     .status {
       display: inline-flex;
       align-items: center;
@@ -670,6 +709,23 @@
       border-color: #d8e5d7;
       background: #f4faf3;
       color: var(--success);
+    }
+
+    .workspace-select,
+    .workspace-button {
+      border-color: #e1d8d0;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .workspace-select {
+      background: #fffefa;
+    }
+
+    .workspace-button:hover {
+      border-color: #cfc6ba;
+      background: #f7f2ea;
+      color: var(--ink);
     }
 
     .delete-current {
@@ -1468,6 +1524,16 @@
             <p>Continue where you left off.</p>
           </div>
           <div class="topbar-actions">
+            <div class="workspace-tools" aria-label="Workspace tools">
+              <select id="projectSelect" class="workspace-select" aria-label="Active project">
+                <option value="">General</option>
+              </select>
+              <button id="newProjectButton" class="workspace-button" type="button" aria-label="Create a project" title="Create a project">Project</button>
+              <button id="memoryButton" class="workspace-button" type="button" aria-label="View or add memory" title="View or add memory">Memory</button>
+              <button id="knowledgeButton" class="workspace-button" type="button" aria-label="Save or view project knowledge" title="Save or view project knowledge">Knowledge</button>
+              <button id="saveArtifactButton" class="workspace-button" type="button" aria-label="Save last Ved reply as artifact" title="Save last Ved reply as artifact">Save Reply</button>
+              <button id="artifactButton" class="workspace-button" type="button" aria-label="View saved artifacts" title="View saved artifacts">Artifacts</button>
+            </div>
             <button
               id="deleteCurrentButton"
               class="delete-current"
@@ -1550,6 +1616,12 @@
       const newChatButton = document.querySelector("#newChatButton");
       const clearHistoryButton = document.querySelector("#clearHistoryButton");
       const deleteCurrentButton = document.querySelector("#deleteCurrentButton");
+      const projectSelect = document.querySelector("#projectSelect");
+      const newProjectButton = document.querySelector("#newProjectButton");
+      const memoryButton = document.querySelector("#memoryButton");
+      const knowledgeButton = document.querySelector("#knowledgeButton");
+      const saveArtifactButton = document.querySelector("#saveArtifactButton");
+      const artifactButton = document.querySelector("#artifactButton");
       const attachButton = document.querySelector("#attachButton");
       const linkButton = document.querySelector("#linkButton");
       const fileInput = document.querySelector("#fileInput");
@@ -1558,6 +1630,7 @@
       const voiceStatus = document.querySelector("#voiceStatus");
       const mainPanel = document.querySelector(".main");
       const storageKey = `ved_conversations_${currentUser.email}`;
+      const activeProjectStorageKey = `ved_active_project_${currentUser.email}`;
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const promptRecentMessageCount = 8;
@@ -1570,6 +1643,8 @@
       const backupWebSearchModel = "openai/gpt-5.2-chat";
 
       let conversations = loadConversations();
+      let workspace = { projects: [], memories: [], knowledge: [], artifacts: [] };
+      let activeProjectId = localStorage.getItem(activeProjectStorageKey) || "";
       let activeId = conversations[0]?.id || createConversation().id;
       let pendingAttachments = [];
       let recognition = null;
@@ -1583,6 +1658,7 @@
       renderMessages();
       renderPendingAttachments();
       setupVoiceInput();
+      loadWorkspace();
 
       newChatButton.addEventListener("click", () => {
         const conversation = createConversation();
@@ -1591,6 +1667,142 @@
         renderConversationList();
         renderMessages();
         messageInput.focus();
+      });
+
+      projectSelect.addEventListener("change", async () => {
+        activeProjectId = projectSelect.value;
+        localStorage.setItem(activeProjectStorageKey, activeProjectId);
+        const conversation = activeConversation();
+        conversation.projectId = activeProjectId;
+        saveConversations();
+        renderMessages();
+        await loadWorkspace();
+        messageInput.focus();
+      });
+
+      newProjectButton.addEventListener("click", async () => {
+        const name = window.prompt("Project name:");
+        if (!name) {
+          return;
+        }
+
+        const instructions = window.prompt("Optional project instructions for Ved:", "") || "";
+        try {
+          const data = await apiRequest("/api/projects", {
+            method: "POST",
+            body: JSON.stringify({ name, instructions }),
+          });
+          activeProjectId = data.project.id;
+          localStorage.setItem(activeProjectStorageKey, activeProjectId);
+          activeConversation().projectId = activeProjectId;
+          saveConversations();
+          await loadWorkspace();
+          setVoiceStatus(`Project active: ${data.project.name}`);
+        } catch (error) {
+          setVoiceStatus(error?.message || "Could not create project.");
+        }
+      });
+
+      memoryButton.addEventListener("click", async () => {
+        const existing = workspace.memories.map((memory, index) => `${index + 1}. ${memory.note}`).join("\n");
+        const note = window.prompt(
+          `${existing ? `Saved memories:\n${existing}\n\n` : ""}Add a memory for Ved to remember:`,
+          ""
+        );
+        if (!note) {
+          return;
+        }
+
+        try {
+          await apiRequest("/api/memories", {
+            method: "POST",
+            body: JSON.stringify({ note }),
+          });
+          await loadWorkspace();
+          setVoiceStatus("Memory saved.");
+        } catch (error) {
+          setVoiceStatus(error?.message || "Could not save memory.");
+        }
+      });
+
+      knowledgeButton.addEventListener("click", async () => {
+        const currentProject = workspace.projects.find((project) => project.id === activeProjectId);
+        const existing = workspace.knowledge
+          .slice(0, 8)
+          .map((item, index) => `${index + 1}. ${item.title}`)
+          .join("\n");
+        const content = window.prompt(
+          `${currentProject ? `Project: ${currentProject.name}\n` : "General knowledge\n"}${
+            existing ? `Saved knowledge:\n${existing}\n\n` : ""
+          }Paste a note, fact, document excerpt, or instruction to save:`,
+          ""
+        );
+        if (!content) {
+          return;
+        }
+
+        const title = window.prompt("Knowledge title:", content.slice(0, 60)) || "Knowledge note";
+        try {
+          await apiRequest("/api/knowledge", {
+            method: "POST",
+            body: JSON.stringify({
+              projectId: activeProjectId,
+              title,
+              content,
+              source: "Saved from chat UI",
+            }),
+          });
+          await loadWorkspace();
+          setVoiceStatus("Knowledge saved.");
+        } catch (error) {
+          setVoiceStatus(error?.message || "Could not save knowledge.");
+        }
+      });
+
+      saveArtifactButton.addEventListener("click", async () => {
+        const message = [...activeConversation().messages]
+          .reverse()
+          .find((item) => item.role === "assistant" && cleanAssistantText(item.content) && item.content !== "Ved is thinking...");
+        if (!message) {
+          setVoiceStatus("No Ved reply to save yet.");
+          return;
+        }
+
+        const title = window.prompt("Artifact title:", cleanAssistantText(message.content).slice(0, 60)) || "Ved artifact";
+        try {
+          await apiRequest("/api/artifacts", {
+            method: "POST",
+            body: JSON.stringify({
+              projectId: activeProjectId,
+              title,
+              kind: "reply",
+              content: cleanAssistantText(message.content),
+            }),
+          });
+          await loadWorkspace();
+          setVoiceStatus("Artifact saved.");
+        } catch (error) {
+          setVoiceStatus(error?.message || "Could not save artifact.");
+        }
+      });
+
+      artifactButton.addEventListener("click", () => {
+        if (!workspace.artifacts.length) {
+          setVoiceStatus("No saved artifacts in this project yet.");
+          return;
+        }
+
+        const menu = workspace.artifacts
+          .map((artifact, index) => `${index + 1}. ${artifact.title} (${artifact.kind})`)
+          .join("\n");
+        const choice = window.prompt(`Saved artifacts:\n${menu}\n\nType a number to open it:`);
+        const index = Number.parseInt(choice, 10) - 1;
+        const artifact = workspace.artifacts[index];
+        if (!artifact) {
+          return;
+        }
+
+        openArtifact(artifact);
       });
 
       clearHistoryButton.addEventListener("click", () => {
@@ -1652,6 +1864,7 @@
         renderPendingAttachments();
 
         const conversation = activeConversation();
+        conversation.projectId = activeProjectId;
         conversation.messages.push({
           role: "user",
           content: userContent,
@@ -1696,6 +1909,7 @@
               history,
               contextSummary,
               timezone: userTimezone,
+              projectId: activeProjectId,
               attachments: attachmentsForRequest,
             }),
           });
@@ -1745,6 +1959,11 @@
             searchHtml: data.searchHtml || "",
           });
 
+          if (data.memorySaved?.note) {
+            setVoiceStatus(`Memory saved: ${data.memorySaved.note}`);
+          }
+          saveTextAttachmentsToKnowledge(attachmentsForRequest).catch(() => {});
+
           if (isVoiceMessage) {
             speakReply(reply);
           }
@@ -1768,6 +1987,102 @@
           messageInput.focus();
         }
       });
+
+      async function apiRequest(url, options = {}) {
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            "Content-Type": "application/json",
+            ...(options.headers || {}),
+          },
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "Request failed.");
+        }
+        return data;
+      }
+
+      async function loadWorkspace() {
+        try {
+          const params = new URLSearchParams();
+          if (activeProjectId) {
+            params.set("projectId", activeProjectId);
+          }
+          workspace = await apiRequest(`/api/workspace?${params.toString()}`);
+          if (activeProjectId && !workspace.projects.some((project) => project.id === activeProjectId)) {
+            activeProjectId = "";
+            localStorage.setItem(activeProjectStorageKey, "");
+            workspace = await apiRequest("/api/workspace");
+          }
+          renderProjectSelect();
+        } catch (error) {
+          setVoiceStatus(error?.message || "Could not load workspace tools.");
+        }
+      }
+
+      function renderProjectSelect() {
+        projectSelect.innerHTML = "";
+
+        const general = document.createElement("option");
+        general.value = "";
+        general.textContent = "General";
+        projectSelect.appendChild(general);
+
+        workspace.projects.forEach((project) => {
+          const option = document.createElement("option");
+          option.value = project.id;
+          option.textContent = project.name;
+          projectSelect.appendChild(option);
+        });
+
+        projectSelect.value = activeProjectId;
+      }
+
+      function openArtifact(artifact) {
+        const artifactWindow = window.open("", "_blank", "width=900,height=700");
+        if (!artifactWindow) {
+          setVoiceStatus("Popup blocked. Allow popups to open artifacts.");
+          return;
+        }
+
+        artifactWindow.opener = null;
+        artifactWindow.document.title = artifact.title || "Ved artifact";
+        const pre = artifactWindow.document.createElement("pre");
+        pre.style.whiteSpace = "pre-wrap";
+        pre.style.font = "15px/1.5 system-ui, sans-serif";
+        pre.style.padding = "24px";
+        pre.textContent = artifact.content || "";
+        artifactWindow.document.body.style.margin = "0";
+        artifactWindow.document.body.appendChild(pre);
+      }
+
+      async function saveTextAttachmentsToKnowledge(attachments) {
+        if (!activeProjectId) {
+          return;
+        }
+
+        const textAttachments = attachments.filter((attachment) => attachment.type === "text" && attachment.text);
+        for (const attachment of textAttachments) {
+          try {
+            await apiRequest("/api/knowledge", {
+              method: "POST",
+              body: JSON.stringify({
+                projectId: activeProjectId,
+                title: attachment.name || "Uploaded text",
+                content: attachment.text,
+                source: "Uploaded attachment",
+              }),
+            });
+          } catch {
+            continue;
+          }
+        }
+
+        if (textAttachments.length) {
+          await loadWorkspace();
+        }
+      }
 
       async function addFiles(fileList) {
         const files = Array.from(fileList || []);
@@ -2319,6 +2634,7 @@
       function createConversation() {
         const conversation = {
           id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+          projectId: activeProjectId,
           title: "New conversation",
           updatedAt: new Date().toISOString(),
           messages: [
@@ -2403,6 +2719,9 @@
             button.append(title, date);
             button.addEventListener("click", () => {
               activeId = conversation.id;
+              activeProjectId = conversation.projectId || "";
+              localStorage.setItem(activeProjectStorageKey, activeProjectId);
+              loadWorkspace();
               renderConversationList();
               renderMessages();
             });
