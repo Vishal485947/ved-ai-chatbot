@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ved AI Chatbot</title>
-  <meta name="ved-ui-version" content="footer-actions-v1" />
+  <meta name="ved-ui-version" content="professional-answers-v1" />
   <link rel="icon" href="{{ url_for('static', filename='ved-logo.svg') }}" type="image/svg+xml" />
   <style>
     * {
@@ -3701,12 +3701,12 @@
           {
             role: "system",
             content:
-              `You are Ved, a friendly AI chatbot. Keep replies concise: 3-6 short sentences or a few bullets. ` +
+              `You are Ved, a friendly and professional AI assistant. Give complete, well-structured answers with practical details, examples, steps, or caveats when useful. Use headings, bullets, or numbered steps when they improve readability. Keep only greetings and very small questions brief. ` +
               `If the user asks who created you, answer exactly: My creator is Vishal Raj,a student of class X B  SPSTDSC. ` +
               `Current user date/time: ${localNow} (${userTimezone}). ` +
               `Do not mention backup systems, rate limits, Gemini, or Puter. ` +
               (useWebSearch
-                ? `Use web search for current or live information. Include source names or links when available.`
+                ? `Use web search for current or live information. Summarize professionally and include source names or links when available.`
                 : `Answer directly without claiming to have searched the web.`),
           },
           ...recentMessages,
@@ -3739,7 +3739,7 @@
 
         const useWebSearch = needsBackupWebSearch(userText);
         const options = {
-          max_tokens: 700,
+          max_tokens: 1200,
           temperature: 0.4,
           model: useWebSearch ? backupWebSearchModel : backupTextModel,
         };
@@ -3761,12 +3761,12 @@
           },
           {
             input: buildBackupPrompt(userText, priorMessages, false),
-            options: { max_tokens: 700, temperature: 0.4, model: backupTextModel },
+            options: { max_tokens: 1200, temperature: 0.4, model: backupTextModel },
             useMessageArray: false,
           },
           {
             input: buildBackupPrompt(userText, priorMessages, false),
-            options: { max_tokens: 700, temperature: 0.4 },
+            options: { max_tokens: 1200, temperature: 0.4 },
             useMessageArray: false,
           },
         ];

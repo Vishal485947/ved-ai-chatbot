@@ -16,7 +16,7 @@ services:
       - key: MAX_MESSAGES_PER_HOUR
         value: "20"
       - key: MAX_OUTPUT_TOKENS
-        value: "700"
+        value: "1200"
       - key: PROMPT_RECENT_MESSAGES
         value: "8"
       - key: PROMPT_SUMMARY_CHARS
