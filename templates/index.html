@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ved AI Chatbot</title>
-  <meta name="ved-ui-version" content="puter-web-search-fallback-v1" />
+  <meta name="ved-ui-version" content="uizard-inspired-realtime-v1" />
   <link rel="icon" href="{{ url_for('static', filename='ved-logo.svg') }}" type="image/svg+xml" />
   <style>
     * {
@@ -56,9 +56,8 @@
       background:
         linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-        radial-gradient(circle at 78% 10%, rgba(255, 122, 26, 0.11), transparent 30%),
         #05070a;
-      background-size: 128px 128px, 128px 128px, auto, auto;
+      background-size: 128px 128px, 128px 128px, auto;
     }
 
     .sidebar {
@@ -956,10 +955,8 @@
       background:
         linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-        radial-gradient(circle at 72% 12%, rgba(255, 122, 26, 0.16), transparent 31%),
-        radial-gradient(circle at 10% 92%, rgba(72, 229, 164, 0.1), transparent 28%),
         #030507;
-      background-size: 128px 128px, 128px 128px, auto, auto, auto;
+      background-size: 128px 128px, 128px 128px, auto;
       color: #ffffff;
     }
 
@@ -1262,6 +1259,432 @@
       line-height: 1.5;
     }
 
+    /* Uizard-inspired refresh: soft surfaces, rounded tools, and cleaner workspace hierarchy. */
+    body {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background: #f6f4ff;
+    }
+
+    button,
+    a,
+    select,
+    input {
+      transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease,
+        box-shadow 0.18s ease, transform 0.18s ease;
+    }
+
+    button:hover,
+    .google-button:hover,
+    .login-nav-cta:hover,
+    .workspace-button:hover,
+    .prompt-pill:hover {
+      transform: translateY(-1px);
+    }
+
+    .app {
+      --ink: #1d2230;
+      --muted: #687184;
+      --panel: #ffffff;
+      --line: #e4e0f3;
+      --soft: #f8f7ff;
+      --brand: #6c63ff;
+      --brand-dark: #564bd7;
+      --accent: #09b38f;
+      --warm: #ffb45e;
+      --nav: #ffffff;
+      --nav-soft: #f0edff;
+      --danger: #dc4c64;
+      --success: #0f9f6e;
+      --focus: #9d8cff;
+      grid-template-columns: 292px 1fr;
+      background:
+        linear-gradient(135deg, #fbfaff 0%, #f2f8ff 45%, #f8fff9 100%);
+      color: var(--ink);
+    }
+
+    .sidebar {
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--ink);
+      border-right: 1px solid rgba(108, 99, 255, 0.14);
+      box-shadow: 20px 0 50px rgba(38, 42, 74, 0.06);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand,
+    .sidebar-footer {
+      border-color: rgba(108, 99, 255, 0.12);
+    }
+
+    .brand h1,
+    .profile-name {
+      color: #1d2230;
+    }
+
+    .sidebar .eyebrow,
+    .conversation-heading,
+    .conversation-date,
+    .profile-email {
+      color: var(--muted);
+    }
+
+    .ved-logo {
+      border-radius: 22px;
+      filter: drop-shadow(0 16px 28px rgba(108, 99, 255, 0.2));
+    }
+
+    .ved-logo.small,
+    .ved-logo.mini {
+      border-radius: 14px;
+    }
+
+    .new-chat,
+    .history-clear,
+    .delete-chat-button,
+    .logout,
+    .delete-current,
+    .workspace-button,
+    .workspace-select,
+    .prompt-pill,
+    .tool-button,
+    .voice-button,
+    .send-button,
+    .google-button,
+    .login-nav-cta {
+      border-radius: 14px;
+    }
+
+    .new-chat {
+      border: 0;
+      background: #1f2433;
+      color: #ffffff;
+      box-shadow: 0 14px 28px rgba(31, 36, 51, 0.16);
+    }
+
+    .new-chat:hover {
+      background: var(--brand);
+      box-shadow: 0 16px 34px rgba(108, 99, 255, 0.24);
+    }
+
+    .history-clear,
+    .delete-chat-button,
+    .logout {
+      border-color: #e4e0f3;
+      color: var(--muted);
+      background: #ffffff;
+    }
+
+    .history-clear:hover,
+    .delete-chat-button:hover,
+    .logout:hover,
+    .delete-current:hover {
+      border-color: rgba(220, 76, 100, 0.28);
+      background: #fff1f4;
+      color: var(--danger);
+    }
+
+    .conversation-item {
+      border-radius: 16px;
+      color: var(--ink);
+    }
+
+    .conversation-item:hover,
+    .conversation-item.active {
+      background: var(--nav-soft);
+      border-color: rgba(108, 99, 255, 0.16);
+      box-shadow: inset 0 0 0 1px rgba(108, 99, 255, 0.08);
+    }
+
+    .main {
+      background: transparent;
+    }
+
+    .topbar {
+      min-height: 74px;
+      padding: 16px 28px;
+      background: rgba(255, 255, 255, 0.62);
+      border-bottom: 1px solid rgba(108, 99, 255, 0.12);
+      backdrop-filter: blur(20px);
+    }
+
+    .topbar h2 {
+      color: #1d2230;
+      font-size: 18px;
+    }
+
+    .topbar p {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .workspace-select,
+    .workspace-button,
+    .delete-current,
+    .status {
+      min-height: 38px;
+      border-color: #e1dcf4;
+      background: rgba(255, 255, 255, 0.72);
+      color: #3f4658;
+      box-shadow: 0 8px 22px rgba(38, 42, 74, 0.05);
+    }
+
+    .workspace-button:hover,
+    .workspace-select:hover {
+      border-color: rgba(108, 99, 255, 0.32);
+      background: #ffffff;
+      color: var(--brand-dark);
+      box-shadow: 0 12px 26px rgba(108, 99, 255, 0.12);
+    }
+
+    .status {
+      color: var(--success);
+      background: #f0fff9;
+      border-color: #cceee3;
+    }
+
+    .messages {
+      width: min(820px, calc(100% - 36px));
+      padding-top: 34px;
+    }
+
+    .welcome-panel h2 {
+      color: #202333;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      font-weight: 760;
+    }
+
+    .welcome-mark {
+      color: var(--brand);
+    }
+
+    .prompt-pill {
+      border-color: #e1dcf4;
+      background: rgba(255, 255, 255, 0.84);
+      color: #495064;
+      box-shadow: 0 8px 24px rgba(38, 42, 74, 0.06);
+    }
+
+    .prompt-pill:hover {
+      background: #ffffff;
+      color: var(--brand-dark);
+      box-shadow: 0 12px 30px rgba(108, 99, 255, 0.12);
+    }
+
+    .message {
+      border-radius: 22px;
+      box-shadow: 0 14px 36px rgba(38, 42, 74, 0.08);
+    }
+
+    .message.user {
+      background: #ebe8ff;
+      color: #25283a;
+    }
+
+    .message.assistant {
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(108, 99, 255, 0.1);
+      color: #25283a;
+      padding: 16px 18px;
+    }
+
+    .source-link,
+    .attachment-chip,
+    .message-attachment {
+      border-radius: 999px;
+      border-color: #e1dcf4;
+      background: #f7f5ff;
+      color: var(--brand-dark);
+    }
+
+    .composer {
+      width: min(760px, calc(100% - 36px));
+      margin-bottom: 28px;
+      padding: 14px;
+      border: 1px solid rgba(108, 99, 255, 0.16);
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 24px 70px rgba(38, 42, 74, 0.12);
+      backdrop-filter: blur(18px);
+    }
+
+    .composer-row {
+      gap: 10px;
+    }
+
+    .composer input[type="text"] {
+      min-height: 52px;
+      color: #1d2230;
+    }
+
+    .tool-button,
+    .voice-button {
+      min-height: 42px;
+      border-color: transparent;
+      background: #f2efff;
+      color: #4e5368;
+    }
+
+    .tool-button:hover,
+    .voice-button:hover {
+      background: #e7e3ff;
+      color: var(--brand-dark);
+    }
+
+    .send-button {
+      min-height: 44px;
+      border: 0;
+      background: linear-gradient(135deg, var(--brand), #3b82f6);
+      color: #ffffff;
+      box-shadow: 0 14px 28px rgba(108, 99, 255, 0.24);
+    }
+
+    .send-button:hover {
+      background: linear-gradient(135deg, var(--brand-dark), #2563eb);
+      box-shadow: 0 18px 36px rgba(108, 99, 255, 0.3);
+    }
+
+    .login-wrap {
+      background:
+        linear-gradient(135deg, #f7f4ff 0%, #eef8ff 52%, #f5fff8 100%);
+      color: #1d2230;
+    }
+
+    .login-announcement {
+      min-height: 42px;
+      border-bottom: 1px solid rgba(108, 99, 255, 0.14);
+      background: #1f2433;
+      color: #f5f6ff;
+    }
+
+    .login-announcement strong {
+      border-radius: 999px;
+      background: #dff7ef;
+      color: #07795f;
+    }
+
+    .login-announcement a {
+      color: #bcb6ff;
+    }
+
+    .login-nav {
+      background: rgba(255, 255, 255, 0.72);
+      border-bottom: 1px solid rgba(108, 99, 255, 0.12);
+      backdrop-filter: blur(18px);
+    }
+
+    .login-nav-brand,
+    .login-nav-link {
+      color: #1d2230;
+    }
+
+    .login-nav-cta {
+      border: 0;
+      background: #1f2433;
+      color: #ffffff;
+      letter-spacing: 0;
+      box-shadow: 0 12px 28px rgba(31, 36, 51, 0.14);
+    }
+
+    .login-nav-cta:hover {
+      background: var(--brand);
+      color: #ffffff;
+    }
+
+    .login-stage {
+      width: min(1120px, calc(100% - 40px));
+      min-height: auto;
+      margin: 52px auto;
+      grid-template-columns: minmax(0, 0.95fr) minmax(360px, 0.75fr);
+      gap: 0;
+      border: 1px solid rgba(108, 99, 255, 0.16);
+      border-radius: 34px;
+      background: rgba(255, 255, 255, 0.84);
+      box-shadow: 0 34px 90px rgba(38, 42, 74, 0.16);
+      backdrop-filter: blur(18px);
+    }
+
+    .login-card {
+      padding: clamp(34px, 6vw, 70px);
+      background: transparent;
+    }
+
+    .login-mark,
+    .login-card h1,
+    .login-copy,
+    .login-card .eyebrow {
+      color: #1d2230;
+    }
+
+    .login-card .eyebrow {
+      color: var(--brand-dark);
+    }
+
+    .login-card h1 {
+      max-width: 620px;
+      font-size: clamp(42px, 6vw, 72px);
+      line-height: 1.02;
+      font-weight: 820;
+    }
+
+    .login-copy {
+      max-width: 560px;
+      color: var(--muted);
+    }
+
+    .google-button {
+      border: 1px solid #ded8f5;
+      border-radius: 16px;
+      background: #ffffff;
+      color: #1d2230;
+      box-shadow: 0 18px 42px rgba(38, 42, 74, 0.1);
+    }
+
+    .google-button:hover {
+      border-color: rgba(108, 99, 255, 0.38);
+      background: #fbfaff;
+      box-shadow: 0 22px 50px rgba(108, 99, 255, 0.14);
+    }
+
+    .login-badge {
+      border-color: #e1dcf4;
+      background: #f8f6ff;
+      color: #52596c;
+    }
+
+    .auth-error {
+      border-color: rgba(220, 76, 100, 0.25);
+      background: #fff1f4;
+      color: #9e273e;
+    }
+
+    .preview-panel {
+      min-height: auto;
+      padding: clamp(28px, 5vw, 58px);
+      background: linear-gradient(160deg, #23263a 0%, #302b58 48%, #114e46 100%);
+      border-left: 1px solid rgba(108, 99, 255, 0.16);
+    }
+
+    .preview-shell {
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(14px);
+    }
+
+    .preview-message {
+      border-radius: 18px;
+    }
+
+    .preview-message.user-preview {
+      background: #dff7ef;
+      color: #14352e;
+    }
+
+    .preview-message.assistant-preview {
+      background: #ffffff;
+      color: #1d2230;
+    }
+
     @media (max-width: 860px) {
       .app {
         grid-template-columns: 1fr;
@@ -1375,10 +1798,7 @@
 
       <nav class="login-nav" aria-label="Ved navigation">
         <a class="login-nav-brand" href="{{ url_for('home') }}" aria-label="Ved home">
-          <svg class="ved-logo mini" viewBox="0 0 96 96" aria-hidden="true">
-            <path fill="#ff7a1a" d="M14 18c0-5.5 4.5-10 10-10h48c5.5 0 10 4.5 10 10v39.6c0 5.5-4.5 10-10 10H50.4L32.8 84.3c-2.8 2.7-7.5.7-7.5-3.2V67.6H24c-5.5 0-10-4.5-10-10V18Z"></path>
-            <path fill="#160800" d="M30.3 25.5h10.4l8.5 25.1 8.6-25.1h10.1L54.4 61.8H43.8L30.3 25.5Z"></path>
-          </svg>
+          <img class="ved-logo mini" src="{{ url_for('static', filename='ved-logo.svg') }}" alt="" />
           Ved AI
         </a>
         <div class="login-nav-actions">
@@ -1390,21 +1810,7 @@
       <section class="login-stage" aria-label="Ved sign in">
         <div class="login-card">
           <div class="login-mark">
-            <svg class="ved-logo" viewBox="0 0 96 96" role="img" aria-label="Ved logo">
-              <path fill="url(#vedLogoGradientLogin)" d="M14 18c0-5.5 4.5-10 10-10h48c5.5 0 10 4.5 10 10v39.6c0 5.5-4.5 10-10 10H50.4L32.8 84.3c-2.8 2.7-7.5.7-7.5-3.2V67.6H24c-5.5 0-10-4.5-10-10V18Z"></path>
-              <path fill="#fff" d="M30.3 25.5h10.4l8.5 25.1 8.6-25.1h10.1L54.4 61.8H43.8L30.3 25.5Z"></path>
-              <path fill="url(#vedAccentGradientLogin)" d="M66.2 23.8a6 6 0 1 1 0 12.1 6 6 0 0 1 0-12.1ZM74.1 41.3a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 0 1 0-8.4Z"></path>
-              <defs>
-                <linearGradient id="vedLogoGradientLogin" x1="14" x2="82" y1="10" y2="86" gradientUnits="userSpaceOnUse">
-                  <stop offset="0" stop-color="#ff7a1a"></stop>
-                  <stop offset="1" stop-color="#101826"></stop>
-                </linearGradient>
-                <linearGradient id="vedAccentGradientLogin" x1="28" x2="72" y1="20" y2="76" gradientUnits="userSpaceOnUse">
-                  <stop offset="0" stop-color="#ffd166"></stop>
-                  <stop offset="1" stop-color="#48e5a4"></stop>
-                </linearGradient>
-              </defs>
-            </svg>
+            <img class="ved-logo" src="{{ url_for('static', filename='ved-logo.svg') }}" alt="Ved logo" />
             <span>Ved AI Assistant</span>
           </div>
 
@@ -1435,10 +1841,7 @@
           <div class="preview-shell">
             <div class="preview-top">
               <p class="preview-title">
-                <svg class="ved-logo mini" viewBox="0 0 96 96" aria-hidden="true">
-                  <path fill="#2358e6" d="M14 18c0-5.5 4.5-10 10-10h48c5.5 0 10 4.5 10 10v39.6c0 5.5-4.5 10-10 10H50.4L32.8 84.3c-2.8 2.7-7.5.7-7.5-3.2V67.6H24c-5.5 0-10-4.5-10-10V18Z"></path>
-                  <path fill="#fff" d="M30.3 25.5h10.4l8.5 25.1 8.6-25.1h10.1L54.4 61.8H43.8L30.3 25.5Z"></path>
-                </svg>
+                <img class="ved-logo mini" src="{{ url_for('static', filename='ved-logo.svg') }}" alt="" />
                 Ved
               </p>
               <span class="preview-status">Online</span>
@@ -1466,17 +1869,7 @@
       <aside class="sidebar">
         <section class="brand">
           <div class="brand-lockup">
-            <svg class="ved-logo small" viewBox="0 0 96 96" role="img" aria-label="Ved logo">
-              <path fill="url(#vedLogoGradientSidebar)" d="M14 18c0-5.5 4.5-10 10-10h48c5.5 0 10 4.5 10 10v39.6c0 5.5-4.5 10-10 10H50.4L32.8 84.3c-2.8 2.7-7.5.7-7.5-3.2V67.6H24c-5.5 0-10-4.5-10-10V18Z"></path>
-              <path fill="#fff" d="M30.3 25.5h10.4l8.5 25.1 8.6-25.1h10.1L54.4 61.8H43.8L30.3 25.5Z"></path>
-              <path fill="#8fd3ff" d="M66.2 23.8a6 6 0 1 1 0 12.1 6 6 0 0 1 0-12.1Z"></path>
-              <defs>
-                <linearGradient id="vedLogoGradientSidebar" x1="14" x2="82" y1="10" y2="86" gradientUnits="userSpaceOnUse">
-                  <stop offset="0" stop-color="#2358e6"></stop>
-                  <stop offset="1" stop-color="#101826"></stop>
-                </linearGradient>
-              </defs>
-            </svg>
+            <img class="ved-logo small" src="{{ url_for('static', filename='ved-logo.svg') }}" alt="Ved logo" />
             <div>
               <p class="eyebrow">AI Assistant</p>
               <h1>Ved</h1>

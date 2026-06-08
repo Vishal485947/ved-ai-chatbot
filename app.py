@@ -1313,6 +1313,47 @@ def format_live_news_fallback(query, articles):
     return "\n".join(lines)
 
 
+def extract_live_info_query(message):
+    text = re.sub(
+        r"\b(provide|please|me|with|the|latest|current|today'?s?|today|now|right now|show|tell|give|updates?|live|search|web|look|lookup|up|find)\b",
+        " ",
+        str(message or ""),
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"[^a-zA-Z0-9,\s.%/-]", " ", text)
+    query = " ".join(text.split()).strip(" ,-")
+    return compact_text(query or message or "current information", 180)
+
+
+def build_live_source_context(query, articles):
+    if not articles:
+        return ""
+
+    lines = [f"Recent source context for current-info query: {query}"]
+    for article in articles:
+        source_bits = ", ".join(
+            bit for bit in [article.get("domain"), article.get("seenDate")] if bit
+        )
+        lines.append(f"- {article['title']} ({source_bits}): {article['uri']}")
+    return "\n".join(lines)
+
+
+def format_live_source_fallback(query, articles):
+    if not articles:
+        return (
+            "I could not fetch reliable live sources for that topic right now. "
+            "Please try again in a minute or ask with a more specific place, ticker, team, or event name."
+        )
+
+    lines = [f"I could not complete the full live answer, but I found recent sources for {query}:"]
+    for index, article in enumerate(articles, start=1):
+        source = article.get("domain") or "source"
+        seen = article.get("seenDate") or "recent"
+        lines.append(f"{index}. {article['title']} ({source}, {seen})")
+    lines.append("Use the source links for the freshest details because live information can change quickly.")
+    return "\n".join(lines)
+
+
 def looks_like_no_live_access_reply(answer):
     normalized = " ".join(str(answer or "").lower().split())
     no_access_patterns = [
@@ -1650,6 +1691,9 @@ def chat():
     live_news_query = ""
     live_news_articles = []
     live_news_sources = []
+    live_info_query = ""
+    live_info_articles = []
+    live_info_sources = []
     if is_live_news_query(user_message):
         conversation.insert(
             -1,
@@ -1666,6 +1710,22 @@ def chat():
         live_news_context = build_live_news_context(live_news_query, live_news_articles)
         if live_news_context:
             conversation.insert(-1, live_news_context)
+    elif should_use_real_time_search(user_message):
+        conversation.insert(
+            -1,
+            "Current/live information request: use Google Search grounding when available. "
+            "If recent source context is provided below, use it carefully and mention that live details can change.",
+        )
+        live_info_query = extract_live_info_query(user_message)
+        try:
+            live_info_articles, live_info_sources = fetch_google_news_articles(live_info_query, max_records=5)
+        except Exception:
+            live_info_articles = []
+            live_info_sources = []
+
+        live_info_context = build_live_source_context(live_info_query, live_info_articles)
+        if live_info_context:
+            conversation.insert(-1, live_info_context)
 
     try:
         try:
@@ -1733,10 +1793,20 @@ def chat():
                         "searchHtml": "",
                         "memorySaved": saved_memory,
                     })
+                if live_info_articles:
+                    return jsonify({
+                        "reply": format_live_source_fallback(live_info_query, live_info_articles),
+                        "sources": live_info_sources,
+                        "searchHtml": "",
+                        "memorySaved": saved_memory,
+                    })
 
                 return jsonify({
-                    "error": "Gemini is temporarily overloaded. Ved is switching to the backup AI if available; otherwise, please try again in a minute."
-                }), 503
+                    "reply": "Live information is temporarily unavailable. Please try again in a minute with a more specific topic, place, team, ticker, or event.",
+                    "sources": [],
+                    "searchHtml": "",
+                    "memorySaved": saved_memory,
+                })
 
             tried = ", ".join(not_found_models or model_candidates)
             return jsonify({
@@ -1752,9 +1822,14 @@ def chat():
                 answer = format_live_news_fallback(live_news_query, live_news_articles)
             elif not grounding.get("sources"):
                 answer = "I could not fetch fresh live news sources right now. Please try again in a minute."
+        elif should_use_real_time_search(user_message) and looks_like_no_live_access_reply(answer):
+            if live_info_articles:
+                answer = format_live_source_fallback(live_info_query, live_info_articles)
+            elif not grounding.get("sources"):
+                answer = "I could not fetch reliable live sources for that topic right now. Please try again in a minute."
         return jsonify({
             "reply": answer,
-            "sources": merge_sources(grounding.get("sources"), live_news_sources),
+            "sources": merge_sources(grounding.get("sources"), live_news_sources, live_info_sources),
             "searchHtml": grounding.get("searchHtml", ""),
             "memorySaved": saved_memory,
         })
@@ -1766,9 +1841,26 @@ def chat():
             }), 401
 
         if "quota" in error_text or "429" in error_text:
+            if live_news_articles:
+                return jsonify({
+                    "reply": format_live_news_fallback(live_news_query, live_news_articles),
+                    "sources": live_news_sources,
+                    "searchHtml": "",
+                    "memorySaved": saved_memory,
+                })
+            if live_info_articles:
+                return jsonify({
+                    "reply": format_live_source_fallback(live_info_query, live_info_articles),
+                    "sources": live_info_sources,
+                    "searchHtml": "",
+                    "memorySaved": saved_memory,
+                })
             return jsonify({
-                "error": "Your Gemini API key works, but Gemini returned a quota or rate-limit error. Wait a minute and try again, or check Usage & Billing in Google AI Studio."
-            }), 429
+                "reply": "Ved reached the live AI quota right now. Please try again in a minute.",
+                "sources": [],
+                "searchHtml": "",
+                "memorySaved": saved_memory,
+            })
 
         if is_gemini_unavailable_error(error_text):
             if live_news_articles:
@@ -1778,10 +1870,20 @@ def chat():
                     "searchHtml": "",
                     "memorySaved": saved_memory,
                 })
+            if live_info_articles:
+                return jsonify({
+                    "reply": format_live_source_fallback(live_info_query, live_info_articles),
+                    "sources": live_info_sources,
+                    "searchHtml": "",
+                    "memorySaved": saved_memory,
+                })
 
             return jsonify({
-                "error": "Gemini is temporarily overloaded. Ved is switching to the backup AI if available; otherwise, please try again in a minute."
-            }), 503
+                "reply": "Live AI is temporarily overloaded. Please try again in a minute.",
+                "sources": [],
+                "searchHtml": "",
+                "memorySaved": saved_memory,
+            })
 
         if "not_found" in error_text or "not found" in error_text or "404" in error_text:
             return jsonify({
