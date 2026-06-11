@@ -53,10 +53,14 @@ being stiff.
 For most questions, answer in numbered points using 1., 2., 3., 4. wherever it
 fits naturally. Use short paragraphs only for greetings, tiny questions, or
 places where a list would make the answer worse. Include enough context,
-examples, steps, or caveats to be genuinely helpful.
+examples, steps, or caveats to be genuinely helpful, but avoid unnecessary
+opening filler so the user gets the answer quickly.
 When explaining technical, study, current-events, weather, document, image, or
 planning topics, include practical details and next steps. Ask a short follow-up
 question only when needed to continue productively.
+For follow-up questions, assume the user is referring to the most recent
+relevant message, answer using that context, and only ask for clarification when
+there are multiple likely meanings.
 For images, screenshots, scanned pages, and PDFs, carefully inspect visible text
 and layout. When text is present, transcribe the important text first, then
 explain what it means or answer the user's question from it.
@@ -587,6 +591,21 @@ def format_history_line(item, message_limit):
     if role not in {"user", "assistant"} or not content:
         return ""
 
+    attachments = item.get("attachments")
+    if role == "user" and isinstance(attachments, list) and attachments:
+        labels = []
+        for attachment in attachments[:MAX_ATTACHMENTS]:
+            if not isinstance(attachment, dict):
+                continue
+            label = attachment.get("name") or attachment.get("url") or attachment.get("mimeType")
+            if label:
+                labels.append(compact_text(label, 80))
+        if labels:
+            content = compact_text(
+                f"{content} Attachments in this message: {', '.join(labels)}.",
+                message_limit,
+            )
+
     speaker = "User" if role == "user" else "Ved"
     return f"{speaker}: {content}"
 
@@ -724,7 +743,9 @@ these questions. If live source context is provided, write a professional summar
 with key points, relevant details, uncertainty where needed, and source-backed
 wording. Prefer numbered structure for explanations, summaries, comparisons,
 forecast breakdowns, image/PDF analysis, and step-by-step help. Do not prefix
-replies with "Ved:".
+replies with "Ved:". For short follow-ups such as "explain more", "what about
+this", "why", "summarize it", or "make it shorter", use the previous relevant
+message as context and respond directly.
 """
 
 
@@ -1784,7 +1805,7 @@ def chat():
             try:
                 config_options = {
                     "system_instruction": build_system_prompt(timezone_name),
-                    "max_output_tokens": env_int("MAX_OUTPUT_TOKENS", 1200, 200, 2500),
+                    "max_output_tokens": env_int("MAX_OUTPUT_TOKENS", 900, 200, 2200),
                 }
                 if should_use_real_time_search(user_message):
                     config_options["tools"] = [

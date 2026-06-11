@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ved AI Chatbot</title>
-  <meta name="ved-ui-version" content="numbered-answers-mobile-tools-v1" />
+  <meta name="ved-ui-version" content="faster-followup-word-reveal-v1" />
   <link rel="icon" href="{{ url_for('static', filename='ved-logo.svg') }}" type="image/svg+xml" />
   <style>
     * {
@@ -512,6 +512,20 @@
     .message.assistant.is-new .message-text > * {
       animation: answerLineIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
       animation-delay: var(--line-delay, 0ms);
+    }
+
+    .word-reveal {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(7px);
+      transition: opacity 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: opacity, transform;
+    }
+
+    .word-reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
     }
 
     .message.assistant.loading {
@@ -3314,6 +3328,9 @@
       const maxAttachmentTextChars = 60000;
       const backupTextModel = "gpt-5-nano";
       const backupWebSearchModel = "openai/gpt-5.2-chat";
+      const responseTokenBudget = 900;
+      const longThinkingDelayMs = 10000;
+      const wordRevealDelayMs = 24;
       const mobileWorkspaceQuery = window.matchMedia("(max-width: 700px)");
       const workspaceToolsHome = document.createComment("workspace-tools-home");
       workspaceTools.before(workspaceToolsHome);
@@ -3468,7 +3485,7 @@
       saveArtifactButton.addEventListener("click", async () => {
         const message = [...activeConversation().messages]
           .reverse()
-          .find((item) => item.role === "assistant" && cleanAssistantText(item.content) && item.content !== "Ved is thinking...");
+          .find((item) => item.role === "assistant" && !item.loading && cleanAssistantText(item.content));
         if (!message) {
           setVoiceStatus("No Ved reply to save yet.");
           return;
@@ -3596,9 +3613,16 @@
         messageInput.disabled = true;
 
         let priorMessages = [];
+        let longThinkingTimer = null;
         const loading = { role: "assistant", content: "Ved is thinking...", loading: true, animate: true };
         conversation.messages.push(loading);
         renderMessages();
+        longThinkingTimer = window.setTimeout(() => {
+          if (conversation.messages.includes(loading) && loading.loading) {
+            loading.content = "Ved is thinking a little longer";
+            renderMessages();
+          }
+        }, longThinkingDelayMs);
 
         try {
           const messagesForPrompt = conversation.messages.filter((message) => message !== loading);
@@ -3697,6 +3721,9 @@
             speakReply(errorText);
           }
         } finally {
+          if (longThinkingTimer) {
+            window.clearTimeout(longThinkingTimer);
+          }
           conversation.updatedAt = new Date().toISOString();
           saveConversations();
           renderConversationList();
@@ -4333,7 +4360,7 @@
           .slice(-6)
           .map((message) => ({
             role: message.role,
-            content: compactForPrompt(message.content, promptMessageLimit),
+            content: messagePromptContent(message),
           }))
           .filter((message) => ["user", "assistant"].includes(message.role) && message.content);
 
@@ -4342,6 +4369,7 @@
             role: "system",
             content:
               `You are Ved, a friendly and professional AI assistant. Give complete, well-structured answers with practical details, examples, steps, or caveats when useful. Use numbered points like 1., 2., 3., 4. wherever they fit naturally, especially for explanations, summaries, comparisons, image analysis, plans, and instructions. Keep only greetings and very small questions brief. ` +
+              `For follow-up questions, use the recent conversation as context and answer directly instead of asking the user to repeat details. Avoid unnecessary opening filler so replies arrive and read faster. ` +
               `If the user asks who created you, answer exactly: My creator is Vishal Raj,a student of class X B  SPSTDSC. ` +
               `Current user date/time: ${localNow} (${userTimezone}). ` +
               `Do not mention backup systems, rate limits, Gemini, or Puter. ` +
@@ -4379,7 +4407,7 @@
 
         const useWebSearch = needsBackupWebSearch(userText);
         const options = {
-          max_tokens: 1200,
+          max_tokens: responseTokenBudget,
           temperature: 0.4,
           model: useWebSearch ? backupWebSearchModel : backupTextModel,
         };
@@ -4401,12 +4429,12 @@
           },
           {
             input: buildBackupPrompt(userText, priorMessages, false),
-            options: { max_tokens: 1200, temperature: 0.4, model: backupTextModel },
+            options: { max_tokens: responseTokenBudget, temperature: 0.4, model: backupTextModel },
             useMessageArray: false,
           },
           {
             input: buildBackupPrompt(userText, priorMessages, false),
-            options: { max_tokens: 1200, temperature: 0.4 },
+            options: { max_tokens: responseTokenBudget, temperature: 0.4 },
             useMessageArray: false,
           },
         ];
@@ -4433,13 +4461,28 @@
         return `${text.slice(0, maxLength - 3).trim()}...`;
       }
 
+      function messagePromptContent(message) {
+        let text = String(message?.content || "");
+        if (message?.role === "user" && Array.isArray(message.attachments) && message.attachments.length) {
+          const labels = message.attachments
+            .slice(0, maxAttachmentCount)
+            .map((attachment) => attachment.name || attachment.url || attachment.mimeType)
+            .filter(Boolean)
+            .join(", ");
+          if (labels) {
+            text = `${text} Attachments in this message: ${labels}.`;
+          }
+        }
+        return compactForPrompt(text, promptMessageLimit);
+      }
+
       function promptLine(message) {
         if (!message || !["user", "assistant"].includes(message.role) || !message.content) {
           return "";
         }
 
         const speaker = message.role === "user" ? "User" : "Ved";
-        return `${speaker}: ${compactForPrompt(message.content, promptMessageLimit)}`;
+        return `${speaker}: ${messagePromptContent(message)}`;
       }
 
       function summarizeHistoryForPrompt(messages) {
@@ -4626,10 +4669,13 @@
           const assistantText = cleanAssistantText(message.content);
           const isAssistant = message.role === "assistant";
           const isLoading = isAssistant && (message.loading || assistantText === "Ved is thinking...");
-          if (message.animate) {
+          const shouldAnimateMessage = Boolean(message.animate);
+          if (shouldAnimateMessage) {
             bubble.classList.add("is-new");
             message.animate = false;
-            consumedAnimationFlag = true;
+            if (!isLoading) {
+              consumedAnimationFlag = true;
+            }
           }
           if (isLoading) {
             bubble.classList.add("loading");
@@ -4638,9 +4684,13 @@
           const text = document.createElement("div");
           text.className = "message-text";
           if (isLoading) {
-            renderThinkingLoader(text);
+            renderThinkingLoader(text, assistantText || "Ved is thinking");
           } else if (isAssistant) {
-            renderAssistantText(text, assistantText || "Ved could not show that reply. Please send the message again.");
+            renderAssistantText(
+              text,
+              assistantText || "Ved could not show that reply. Please send the message again.",
+              shouldAnimateMessage
+            );
           } else {
             text.textContent = String(message.content ?? "");
           }
@@ -4706,11 +4756,11 @@
         chatMessages.scrollTop = chatMessages.scrollHeight;
       }
 
-      function renderThinkingLoader(container) {
+      function renderThinkingLoader(container, labelText = "Ved is thinking") {
         const loader = document.createElement("span");
         loader.className = "thinking-loader";
         const label = document.createElement("span");
-        label.textContent = "Ved is thinking";
+        label.textContent = labelText.replace(/\.+$/, "");
         const dots = document.createElement("span");
         dots.className = "thinking-dots";
         dots.setAttribute("aria-hidden", "true");
@@ -4719,7 +4769,7 @@
         container.appendChild(loader);
       }
 
-      function renderAssistantText(container, value) {
+      function renderAssistantText(container, value, animateWords = false) {
         const lines = String(value || "").replace(/\r\n/g, "\n").split("\n");
         let paragraphLines = [];
         let activeList = null;
@@ -4820,6 +4870,61 @@
 
         Array.from(container.children).forEach((child, index) => {
           child.style.setProperty("--line-delay", `${Math.min(index * 48, 360)}ms`);
+        });
+
+        if (animateWords) {
+          animateAssistantWords(container);
+        }
+      }
+
+      function animateAssistantWords(container) {
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          return;
+        }
+
+        const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+          acceptNode(node) {
+            if (!node.nodeValue || !node.nodeValue.trim()) {
+              return NodeFilter.FILTER_REJECT;
+            }
+            if (node.parentElement?.closest("pre, code, a")) {
+              return NodeFilter.FILTER_REJECT;
+            }
+            return NodeFilter.FILTER_ACCEPT;
+          },
+        });
+        const textNodes = [];
+        while (walker.nextNode()) {
+          textNodes.push(walker.currentNode);
+        }
+
+        const wordSpans = [];
+        textNodes.forEach((node) => {
+          const fragment = document.createDocumentFragment();
+          const parts = node.nodeValue.split(/(\s+)/);
+          parts.forEach((part) => {
+            if (!part) {
+              return;
+            }
+            if (/^\s+$/.test(part)) {
+              fragment.appendChild(document.createTextNode(part));
+              return;
+            }
+            const span = document.createElement("span");
+            span.className = "word-reveal";
+            span.textContent = part;
+            wordSpans.push(span);
+            fragment.appendChild(span);
+          });
+          node.parentNode.replaceChild(fragment, node);
+        });
+
+        window.requestAnimationFrame(() => {
+          wordSpans.forEach((span, index) => {
+            window.setTimeout(() => {
+              span.classList.add("visible");
+            }, Math.min(index * wordRevealDelayMs, 2200));
+          });
         });
       }
     }
