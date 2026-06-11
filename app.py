@@ -997,21 +997,119 @@ def is_weather_query(message):
     return any(term in normalized for term in weather_terms)
 
 
-def extract_weather_location(message):
+WEATHER_LOCATION_FILLER_WORDS = {
+    "a",
+    "an",
+    "any",
+    "be",
+    "can",
+    "chance",
+    "chances",
+    "check",
+    "current",
+    "currently",
+    "forecast",
+    "for",
+    "give",
+    "happen",
+    "humidity",
+    "in",
+    "is",
+    "it",
+    "me",
+    "near",
+    "now",
+    "of",
+    "please",
+    "possibility",
+    "probability",
+    "rain",
+    "raining",
+    "right",
+    "risk",
+    "show",
+    "temperature",
+    "tell",
+    "the",
+    "there",
+    "today",
+    "tomorrow",
+    "weather",
+    "will",
+    "wind",
+}
+
+WEATHER_REGION_ALIASES = {
+    "up": "Uttar Pradesh",
+    "u p": "Uttar Pradesh",
+    "uttar pradesh": "Uttar Pradesh",
+    "delhi ncr": "Delhi NCR",
+}
+
+
+def clean_weather_location_text(value):
     text = re.sub(
-        r"\b(weather|forecast|temperature|rain|raining|humidity|wind|cloudy|sunny|thunderstorm|showers?|precipitation|precip|chance|chances|probability|possibility|risk)\b",
+        r"\b(what'?s|what is|tell me|show me|give me|will it|is it|right now)\b",
         " ",
-        message,
+        str(value or ""),
         flags=re.IGNORECASE,
     )
     text = re.sub(
-        r"\b(what'?s|what is|tell me|show me|give me|today|tomorrow|now|current|right now|in|for|at|near|please|will it|is it|the|of)\b",
+        r"\b(weather|forecast|temperature|rain|raining|humidity|wind|cloudy|sunny|thunderstorm|showers?|precipitation|precip|chance|chances|probability|possibility|risk)\b",
         " ",
         text,
         flags=re.IGNORECASE,
     )
     text = re.sub(r"[^a-zA-Z0-9,\s-]", " ", text)
-    return " ".join(text.split()).strip(" ,-")
+    words = [word for word in text.replace(",", " ").split() if word.lower() not in WEATHER_LOCATION_FILLER_WORDS]
+    return " ".join(words).strip(" ,-")
+
+
+def extract_weather_location(message):
+    preposition_matches = list(re.finditer(
+        r"\b(?:in|for|at|near)\s+([^?.!;]+)",
+        str(message or ""),
+        flags=re.IGNORECASE,
+    ))
+    for match in reversed(preposition_matches):
+        candidate = clean_weather_location_text(match.group(1))
+        if candidate:
+            return candidate
+
+    return clean_weather_location_text(message)
+
+
+def weather_region_expansions(words):
+    expansions = []
+    if not words:
+        return expansions
+
+    lowered = [word.lower().replace(".", "") for word in words]
+    first_two = " ".join(lowered[:2])
+    first_one = lowered[0]
+    region = WEATHER_REGION_ALIASES.get(first_two) or WEATHER_REGION_ALIASES.get(first_one)
+    consumed = 2 if WEATHER_REGION_ALIASES.get(first_two) else 1
+    if region and len(words) > consumed:
+        place = " ".join(words[consumed:])
+        expansions.extend([
+            f"{place} {region} India",
+            f"{place} {region}",
+            place,
+        ])
+
+    last_two = " ".join(lowered[-2:])
+    last_one = lowered[-1]
+    region = WEATHER_REGION_ALIASES.get(last_two) or WEATHER_REGION_ALIASES.get(last_one)
+    consumed = 2 if WEATHER_REGION_ALIASES.get(last_two) else 1
+    if region and len(words) > consumed:
+        place = " ".join(words[:-consumed])
+        expansions.extend([
+            f"{place} {region} India",
+            f"{place} {region}",
+            place,
+        ])
+
+    return expansions
 
 
 def weather_location_candidates(location_query):
@@ -1024,14 +1122,18 @@ def weather_location_candidates(location_query):
             candidates.append(cleaned)
             seen.add(cleaned.lower())
 
+    words = location_query.split()
+    region_expansions = weather_region_expansions(words)
+    for candidate in region_expansions:
+        add(candidate)
+
     add(location_query)
 
-    words = location_query.split()
     if len(words) > 1:
-        for end in range(len(words) - 1, 0, -1):
-            add(" ".join(words[:end]))
         for start in range(1, len(words)):
             add(" ".join(words[start:]))
+        for end in range(len(words) - 1, 0, -1):
+            add(" ".join(words[:end]))
 
     return candidates
 
