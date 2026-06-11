@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ved AI Chatbot</title>
-  <meta name="ved-ui-version" content="faster-followup-word-reveal-v1" />
+  <meta name="ved-ui-version" content="voice-cleanup-time-greeting-v1" />
   <link rel="icon" href="{{ url_for('static', filename='ved-logo.svg') }}" type="image/svg+xml" />
   <style>
     * {
@@ -4082,8 +4082,8 @@
           }
 
           voiceFinalSegments = mergeVoiceSegments([...voiceFinalSegments, ...finalSegments]);
-          recognizedVoiceText = voiceFinalSegments.join(" ");
-          const fullText = `${recognizedVoiceText} ${interimText}`.trim();
+          recognizedVoiceText = cleanVoiceTranscript(voiceFinalSegments.join(" "));
+          const fullText = cleanVoiceTranscript(`${recognizedVoiceText} ${interimText}`.trim());
           messageInput.value = fullText;
           if (fullText) {
             setVoiceStatus(`Heard: ${fullText}`);
@@ -4101,7 +4101,7 @@
           voiceButton.classList.remove("listening");
           voiceButton.querySelector(".voice-label").textContent = "Voice";
           clearTimeout(silenceTimer);
-          const finalText = recognizedVoiceText.trim() || messageInput.value.trim();
+          const finalText = cleanVoiceTranscript(recognizedVoiceText || messageInput.value);
 
           if (finalText && shouldAutoSendVoice) {
             if (isRepeatedVoiceSubmit(finalText)) {
@@ -4159,6 +4159,96 @@
 
       function normalizeVoiceText(value) {
         return String(value || "").toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
+      }
+
+      function cleanVoiceTranscript(value) {
+        const text = String(value || "").replace(/\s+/g, " ").trim();
+        if (!text) {
+          return "";
+        }
+
+        const repeatedSuffix = findRepeatedVoiceSuffix(text) || findProgressiveVoiceSuffix(text);
+        let compacted = collapseAdjacentVoiceDuplicates(repeatedSuffix || text);
+        const tighterSuffix = findProgressiveVoiceSuffix(compacted);
+        if (tighterSuffix) {
+          compacted = collapseAdjacentVoiceDuplicates(tighterSuffix);
+        }
+        return compacted.replace(/\s+([?.!,])/g, "$1").trim();
+      }
+
+      function voiceWords(value) {
+        return String(value || "").match(/[\p{L}\p{N}']+/gu) || [];
+      }
+
+      function findRepeatedVoiceSuffix(value) {
+        const words = voiceWords(value);
+        const normalized = words.map(normalizeVoiceText);
+        const maxLength = Math.min(18, Math.floor(words.length / 2));
+        for (let length = maxLength; length >= 3; length -= 1) {
+          const suffix = normalized.slice(-length).join(" ");
+          for (let start = 0; start <= normalized.length - length * 2; start += 1) {
+            if (normalized.slice(start, start + length).join(" ") === suffix) {
+              return words.slice(-length).join(" ");
+            }
+          }
+        }
+        return "";
+      }
+
+      function findProgressiveVoiceSuffix(value) {
+        const words = voiceWords(value);
+        if (words.length < 8) {
+          return "";
+        }
+
+        const normalized = words.map(normalizeVoiceText);
+        let best = { length: 0, score: 0, prefixCount: 0 };
+        const maxLength = Math.min(14, words.length - 3);
+        for (let length = 3; length <= maxLength; length += 1) {
+          const suffixStart = normalized.length - length;
+          const suffix = normalized.slice(suffixStart);
+          let score = 0;
+          let prefixCount = 0;
+
+          for (let prefixLength = 1; prefixLength <= length; prefixLength += 1) {
+            const prefix = suffix.slice(0, prefixLength).join(" ");
+            for (let start = 0; start <= suffixStart - prefixLength; start += 1) {
+              if (normalized.slice(start, start + prefixLength).join(" ") === prefix) {
+                score += prefixLength;
+                prefixCount += 1;
+                break;
+              }
+            }
+          }
+
+          if (prefixCount >= 3 && score >= length + 3 && score > best.score) {
+            best = { length, score, prefixCount };
+          }
+        }
+
+        if (best.length && words.length >= best.length * 2) {
+          return words.slice(-best.length).join(" ");
+        }
+        return "";
+      }
+
+      function collapseAdjacentVoiceDuplicates(value) {
+        const words = voiceWords(value);
+        if (!words.length) {
+          return "";
+        }
+
+        const result = [];
+        words.forEach((word) => {
+          const normalized = normalizeVoiceText(word);
+          const last = result.length ? normalizeVoiceText(result[result.length - 1]) : "";
+          if (normalized && normalized === last) {
+            return;
+          }
+          result.push(word);
+        });
+
+        return result.join(" ");
       }
 
       function mergeVoiceSegments(segments) {
@@ -4618,6 +4708,17 @@
           });
       }
 
+      function timeBasedGreeting() {
+        const hour = new Date().getHours();
+        if (hour < 12) {
+          return "Good morning";
+        }
+        if (hour < 17) {
+          return "Good afternoon";
+        }
+        return "Good evening";
+      }
+
       function renderMessages() {
         const conversation = activeConversation();
         const hasUserMessages = conversation.messages.some((message) => message.role === "user");
@@ -4636,7 +4737,7 @@
           mark.setAttribute("aria-hidden", "true");
           mark.textContent = "*";
           const titleText = document.createElement("span");
-          titleText.textContent = `${currentUser.name?.split(" ")[0] || "there"} returns!`;
+          titleText.textContent = `${timeBasedGreeting()}, ${currentUser.name?.split(" ")[0] || "there"}`;
           title.append(mark, titleText);
 
           const pills = document.createElement("div");
