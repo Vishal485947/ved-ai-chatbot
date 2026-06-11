@@ -50,13 +50,16 @@ You are Ved, a friendly and professional AI assistant. Give answers that are
 clear, well-structured, and useful enough that the user can act on them.
 Prefer a polished professional tone: calm, specific, and confident without
 being stiff.
-For most questions, provide a complete answer with enough context, examples,
-steps, or caveats to be genuinely helpful. Use short sections, bullets, or
-numbered steps when they improve readability. For simple greetings or tiny
-questions, keep the reply brief.
+For most questions, answer in numbered points using 1., 2., 3., 4. wherever it
+fits naturally. Use short paragraphs only for greetings, tiny questions, or
+places where a list would make the answer worse. Include enough context,
+examples, steps, or caveats to be genuinely helpful.
 When explaining technical, study, current-events, weather, document, image, or
 planning topics, include practical details and next steps. Ask a short follow-up
 question only when needed to continue productively.
+For images, screenshots, scanned pages, and PDFs, carefully inspect visible text
+and layout. When text is present, transcribe the important text first, then
+explain what it means or answer the user's question from it.
 If the user asks who created you, who made you, who your creator is, or any
 similar question, answer exactly: My creator is Vishal Raj,a student of class X B  SPSTDSC
 Older conversation context may be summarized to save tokens. Use the summary for
@@ -719,7 +722,9 @@ recently, use Google Search grounding or the provided live source context when
 available. Do not say you lack real-time access or mention a knowledge cutoff for
 these questions. If live source context is provided, write a professional summary
 with key points, relevant details, uncertainty where needed, and source-backed
-wording. Do not prefix replies with "Ved:".
+wording. Prefer numbered structure for explanations, summaries, comparisons,
+forecast breakdowns, image/PDF analysis, and step-by-step help. Do not prefix
+replies with "Ved:".
 """
 
 
@@ -889,6 +894,17 @@ def build_attachment_context(attachments, types):
 
             parts.append(types.Part.from_bytes(data=file_bytes, mime_type=mime_type))
             context_lines.append(f"Attachment {index}: {name} ({mime_type}).")
+            if mime_type.startswith("image/"):
+                context_lines.append(
+                    f"Image OCR guidance for attachment {index}: carefully read all visible text, "
+                    "including small labels, handwriting if legible, tables, UI text, signs, and document headings. "
+                    "If the user asks about the image, first mention the most important detected text before analysis."
+                )
+            elif mime_type == "application/pdf":
+                context_lines.append(
+                    f"Document text guidance for attachment {index}: inspect the PDF text and page layout carefully. "
+                    "Summarize or answer from the visible document text, and mention if a section is unclear."
+                )
 
     if context_lines:
         context_lines.insert(
@@ -1065,8 +1081,8 @@ def build_weather_forecast_reply(message):
     wind_unit = clean_unit(current_units.get("wind_speed_10m"), "km/h")
     current_description = weather_code_description(current.get("weather_code"))
     lines = [
-        f"Weather for {label}: {format_number(current.get('temperature_2m'), 1)} degrees {temp_unit} and {current_description}.",
-        f"Feels like {format_number(current.get('apparent_temperature'), 1)} degrees {temp_unit}; humidity {format_number(current.get('relative_humidity_2m'))}%; wind {format_number(current.get('wind_speed_10m'))} {wind_unit}.",
+        f"1. Current weather for {label}: {format_number(current.get('temperature_2m'), 1)} degrees {temp_unit} and {current_description}.",
+        f"2. Comfort details: feels like {format_number(current.get('apparent_temperature'), 1)} degrees {temp_unit}; humidity {format_number(current.get('relative_humidity_2m'))}%; wind {format_number(current.get('wind_speed_10m'))} {wind_unit}.",
     ]
 
     times = daily.get("time") or []
@@ -1086,14 +1102,14 @@ def build_weather_forecast_reply(message):
         weather_code = weather_codes[index] if index < len(weather_codes) else None
         rain_chance = rain_chances[index] if index < len(rain_chances) else None
         forecast_lines.append(
-            f"- {day_label}: {format_number(max_temp, 1)}/{format_number(min_temp, 1)} degrees, {weather_code_description(weather_code)}, rain chance {format_number(rain_chance)}%"
+            f"{index + 1}. {day_label}: {format_number(max_temp, 1)}/{format_number(min_temp, 1)} degrees, {weather_code_description(weather_code)}, rain chance {format_number(rain_chance)}%"
         )
 
     if forecast_lines:
-        lines.append("5-day forecast:\n" + "\n".join(forecast_lines))
+        lines.append("3. 5-day forecast:\n" + "\n".join(forecast_lines))
 
     if matched_query.lower() != location_query.lower():
-        lines.append(f"I searched for {matched_query} because {location_query} was not an exact weather-location match.")
+        lines.append(f"4. Location note: I searched for {matched_query} because {location_query} was not an exact weather-location match.")
 
     return {
         "reply": "\n".join(lines),

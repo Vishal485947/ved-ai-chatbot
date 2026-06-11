@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ved AI Chatbot</title>
-  <meta name="ved-ui-version" content="mobile-responsive-v1" />
+  <meta name="ved-ui-version" content="numbered-answers-mobile-tools-v1" />
   <link rel="icon" href="{{ url_for('static', filename='ved-logo.svg') }}" type="image/svg+xml" />
   <style>
     * {
@@ -124,6 +124,19 @@
       grid-template-columns: 1fr auto;
       gap: 8px;
       padding: 16px;
+    }
+
+    .mobile-workspace-panel {
+      display: none;
+    }
+
+    .mobile-workspace-title {
+      margin: 0 0 10px;
+      color: #aeb9c8;
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     .new-chat {
@@ -436,6 +449,10 @@
       line-height: 1.5;
       white-space: pre-wrap;
       box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
+      transform-origin: center bottom;
+      transition: box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     .message.user {
@@ -453,6 +470,117 @@
 
     .message-text {
       margin: 0;
+      display: grid;
+      gap: 10px;
+      white-space: normal;
+    }
+
+    .message.user .message-text {
+      white-space: pre-wrap;
+    }
+
+    .message-text p,
+    .message-text ol,
+    .message-text ul,
+    .message-text pre {
+      margin: 0;
+    }
+
+    .message-text ol,
+    .message-text ul {
+      padding-left: 1.35rem;
+    }
+
+    .message-text li + li {
+      margin-top: 7px;
+    }
+
+    .message-text pre {
+      overflow-x: auto;
+      padding: 12px;
+      border-radius: 14px;
+      background: #151a25;
+      color: #edf2ff;
+      font: 13px/1.45 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      white-space: pre-wrap;
+    }
+
+    .message.is-new {
+      animation: messageRise 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .message.assistant.is-new .message-text > * {
+      animation: answerLineIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation-delay: var(--line-delay, 0ms);
+    }
+
+    .message.assistant.loading {
+      width: fit-content;
+      min-width: 138px;
+    }
+
+    .thinking-loader {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #687184;
+      font-weight: 750;
+    }
+
+    .thinking-dots {
+      display: inline-flex;
+      gap: 4px;
+    }
+
+    .thinking-dots span {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: currentColor;
+      animation: thinkingDot 1.1s ease-in-out infinite;
+    }
+
+    .thinking-dots span:nth-child(2) {
+      animation-delay: 0.16s;
+    }
+
+    .thinking-dots span:nth-child(3) {
+      animation-delay: 0.32s;
+    }
+
+    @keyframes messageRise {
+      from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.985);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes answerLineIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes thinkingDot {
+      0%,
+      80%,
+      100% {
+        opacity: 0.32;
+        transform: translateY(0);
+      }
+      40% {
+        opacity: 1;
+        transform: translateY(-4px);
+      }
     }
 
     .sources {
@@ -1269,8 +1397,12 @@
     a,
     select,
     input {
-      transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease,
-        box-shadow 0.18s ease, transform 0.18s ease;
+      touch-action: manipulation;
+      transition: background-color 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+        color 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.24s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     button:hover,
@@ -2508,6 +2640,30 @@
         width: min(336px, calc(100vw - 18px));
       }
 
+      .mobile-workspace-panel {
+        display: block;
+        padding: 4px 16px 16px;
+        border-bottom: 1px solid rgba(108, 99, 255, 0.12);
+      }
+
+      .mobile-workspace-dock:empty {
+        display: none;
+      }
+
+      .mobile-workspace-dock .workspace-tools {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        width: 100%;
+      }
+
+      .mobile-workspace-dock .workspace-select,
+      .mobile-workspace-dock .workspace-button {
+        width: 100%;
+        min-height: 44px;
+        justify-content: center;
+      }
+
       .sidebar-toggle {
         width: 48px;
         height: 48px;
@@ -2670,6 +2826,17 @@
       .footer-brand img {
         width: 48px;
         height: 48px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
       }
     }
   </style>
@@ -2978,6 +3145,10 @@
             Clear
           </button>
         </div>
+        <section id="mobileWorkspacePanel" class="mobile-workspace-panel" aria-labelledby="mobileWorkspaceTitle">
+          <p id="mobileWorkspaceTitle" class="mobile-workspace-title">Workspace</p>
+          <div id="mobileWorkspaceDock" class="mobile-workspace-dock"></div>
+        </section>
         <div class="conversation-heading">Previous Conversations</div>
         <nav id="conversationList" class="conversation-list" aria-label="Previous conversations"></nav>
 
@@ -3019,7 +3190,7 @@
             <p>Continue where you left off.</p>
           </div>
           <div class="topbar-actions">
-            <div class="workspace-tools" aria-label="Workspace tools">
+            <div id="workspaceTools" class="workspace-tools" aria-label="Workspace tools">
               <select id="projectSelect" class="workspace-select" aria-label="Active project">
                 <option value="">General</option>
               </select>
@@ -3116,6 +3287,8 @@
       const newChatButton = document.querySelector("#newChatButton");
       const clearHistoryButton = document.querySelector("#clearHistoryButton");
       const deleteCurrentButton = document.querySelector("#deleteCurrentButton");
+      const workspaceTools = document.querySelector("#workspaceTools");
+      const mobileWorkspaceDock = document.querySelector("#mobileWorkspaceDock");
       const projectSelect = document.querySelector("#projectSelect");
       const newProjectButton = document.querySelector("#newProjectButton");
       const memoryButton = document.querySelector("#memoryButton");
@@ -3141,6 +3314,9 @@
       const maxAttachmentTextChars = 60000;
       const backupTextModel = "gpt-5-nano";
       const backupWebSearchModel = "openai/gpt-5.2-chat";
+      const mobileWorkspaceQuery = window.matchMedia("(max-width: 700px)");
+      const workspaceToolsHome = document.createComment("workspace-tools-home");
+      workspaceTools.before(workspaceToolsHome);
 
       let conversations = loadConversations();
       let workspace = { projects: [], memories: [], knowledge: [], artifacts: [] };
@@ -3150,13 +3326,17 @@
       let recognition = null;
       let isListening = false;
       let recognizedVoiceText = "";
+      let voiceFinalSegments = [];
       let submitNextAsVoice = false;
       let shouldAutoSendVoice = false;
       let silenceTimer = null;
+      let lastVoiceSubmitText = "";
+      let lastVoiceSubmitAt = 0;
 
       renderConversationList();
       renderMessages();
       renderPendingAttachments();
+      setupResponsiveWorkspaceTools();
       setupVoiceInput();
       loadWorkspace();
       closeSidebar();
@@ -3415,13 +3595,14 @@
         linkButton.disabled = true;
         messageInput.disabled = true;
 
-        const loading = { role: "assistant", content: "Ved is thinking..." };
+        let priorMessages = [];
+        const loading = { role: "assistant", content: "Ved is thinking...", loading: true, animate: true };
         conversation.messages.push(loading);
         renderMessages();
 
         try {
           const messagesForPrompt = conversation.messages.filter((message) => message !== loading);
-          const priorMessages = messagesForPrompt.slice(0, -1);
+          priorMessages = messagesForPrompt.slice(0, -1);
           const history = priorMessages.slice(-promptRecentMessageCount);
           const contextSummary = summarizeHistoryForPrompt(
             priorMessages.slice(0, -promptRecentMessageCount)
@@ -3442,17 +3623,17 @@
 
           const responseText = await response.text();
           let data = {};
+          let serverReturnedJson = true;
           try {
-            data = JSON.parse(responseText);
+            data = responseText ? JSON.parse(responseText) : {};
           } catch {
-            data = {
-              error: "Ved received an unexpected server response. Please wait for the latest deployment to finish, then try again.",
-            };
+            serverReturnedJson = false;
+            data = { error: friendlyServerResponseMessage(response.status, responseText) };
           }
 
-          if (!response.ok) {
+          if (!response.ok || !serverReturnedJson) {
             if (!attachmentsForRequest.length && shouldUseBackupAi(response.status, data.error)) {
-              loading.content = "Ved is checking...";
+              loading.content = "Ved is checking another route...";
               renderMessages();
 
               const backupReply = await getBackupReply(userContent, priorMessages);
@@ -3460,6 +3641,7 @@
               conversation.messages.push({
                 role: "assistant",
                 content: backupReply,
+                animate: true,
               });
 
               if (isVoiceMessage) {
@@ -3483,6 +3665,7 @@
             content: reply,
             sources: data.sources || [],
             searchHtml: data.searchHtml || "",
+            animate: true,
           });
 
           if (data.memorySaved?.note) {
@@ -3495,8 +3678,21 @@
           }
         } catch (error) {
           const errorText = cleanAssistantText(error?.message) || "Ved could not reply right now. Please try again.";
+          if (!attachmentsForRequest.length && shouldUseBackupAi(0, errorText)) {
+            try {
+              const backupReply = await getBackupReply(userContent, priorMessages);
+              conversation.messages = conversation.messages.filter((message) => message !== loading);
+              conversation.messages.push({ role: "assistant", content: backupReply, animate: true });
+              if (isVoiceMessage) {
+                speakReply(backupReply);
+              }
+              return;
+            } catch {
+              // Fall through to the friendly error below.
+            }
+          }
           conversation.messages = conversation.messages.filter((message) => message !== loading);
-          conversation.messages.push({ role: "assistant", content: errorText });
+          conversation.messages.push({ role: "assistant", content: errorText, animate: true });
           if (isVoiceMessage) {
             speakReply(errorText);
           }
@@ -3527,6 +3723,23 @@
         appSidebar.inert = true;
         appSidebar.setAttribute("aria-hidden", "true");
         sidebarToggle.setAttribute("aria-expanded", "false");
+      }
+
+      function setupResponsiveWorkspaceTools() {
+        placeWorkspaceTools();
+        if (mobileWorkspaceQuery.addEventListener) {
+          mobileWorkspaceQuery.addEventListener("change", placeWorkspaceTools);
+        } else if (mobileWorkspaceQuery.addListener) {
+          mobileWorkspaceQuery.addListener(placeWorkspaceTools);
+        }
+      }
+
+      function placeWorkspaceTools() {
+        if (mobileWorkspaceQuery.matches) {
+          mobileWorkspaceDock.appendChild(workspaceTools);
+        } else {
+          workspaceToolsHome.after(workspaceTools);
+        }
       }
 
       async function apiRequest(url, options = {}) {
@@ -3820,6 +4033,7 @@
         recognition.addEventListener("start", () => {
           isListening = true;
           recognizedVoiceText = "";
+          voiceFinalSegments = [];
           shouldAutoSendVoice = true;
           clearTimeout(silenceTimer);
           voiceButton.classList.add("listening");
@@ -3828,17 +4042,20 @@
         });
 
         recognition.addEventListener("result", (event) => {
+          const finalSegments = [];
           let interimText = "";
 
-          for (let index = event.resultIndex; index < event.results.length; index += 1) {
-            const transcript = event.results[index][0].transcript;
+          for (let index = 0; index < event.results.length; index += 1) {
+            const transcript = event.results[index][0].transcript.trim();
             if (event.results[index].isFinal) {
-              recognizedVoiceText += transcript;
-            } else {
+              finalSegments.push(transcript);
+            } else if (index >= event.resultIndex) {
               interimText += transcript;
             }
           }
 
+          voiceFinalSegments = mergeVoiceSegments([...voiceFinalSegments, ...finalSegments]);
+          recognizedVoiceText = voiceFinalSegments.join(" ");
           const fullText = `${recognizedVoiceText} ${interimText}`.trim();
           messageInput.value = fullText;
           if (fullText) {
@@ -3860,8 +4077,15 @@
           const finalText = recognizedVoiceText.trim() || messageInput.value.trim();
 
           if (finalText && shouldAutoSendVoice) {
+            if (isRepeatedVoiceSubmit(finalText)) {
+              setVoiceStatus("Voice message already captured.");
+              shouldAutoSendVoice = false;
+              return;
+            }
             messageInput.value = finalText;
             submitNextAsVoice = true;
+            lastVoiceSubmitText = normalizeVoiceText(finalText);
+            lastVoiceSubmitAt = Date.now();
             setVoiceStatus("Voice message captured. Sending...");
             chatForm.requestSubmit();
           } else {
@@ -3895,10 +4119,47 @@
 
           window.speechSynthesis?.cancel();
           recognizedVoiceText = "";
+          voiceFinalSegments = [];
           shouldAutoSendVoice = true;
           messageInput.value = "";
-          recognition.start();
+          try {
+            recognition.start();
+          } catch {
+            setVoiceStatus("Voice input is already starting. Please wait a moment.");
+          }
         });
+      }
+
+      function normalizeVoiceText(value) {
+        return String(value || "").toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
+      }
+
+      function mergeVoiceSegments(segments) {
+        const merged = [];
+        segments.forEach((rawSegment) => {
+          const segment = String(rawSegment || "").replace(/\s+/g, " ").trim();
+          if (!segment) {
+            return;
+          }
+
+          const normalized = normalizeVoiceText(segment);
+          const lastIndex = merged.length - 1;
+          const last = lastIndex >= 0 ? normalizeVoiceText(merged[lastIndex]) : "";
+          if (last && (last === normalized || last.endsWith(normalized))) {
+            return;
+          }
+          if (last && normalized.endsWith(last)) {
+            merged[lastIndex] = segment;
+            return;
+          }
+          merged.push(segment);
+        });
+        return merged;
+      }
+
+      function isRepeatedVoiceSubmit(text) {
+        const normalized = normalizeVoiceText(text);
+        return Boolean(normalized && normalized === lastVoiceSubmitText && Date.now() - lastVoiceSubmitAt < 5000);
       }
 
       function setVoiceStatus(message) {
@@ -3935,8 +4196,38 @@
           (text.includes("temporarily overloaded") ||
             text.includes("unavailable") ||
             text.includes("high demand"));
+        const isTemporaryServerIssue =
+          status === 0 ||
+          status === 502 ||
+          status === 503 ||
+          status === 504 ||
+          text.includes("server returned a web page") ||
+          text.includes("server returned html") ||
+          text.includes("deployment") ||
+          text.includes("cold start") ||
+          text.includes("failed to fetch") ||
+          text.includes("networkerror") ||
+          text.includes("temporarily unavailable");
 
-        return !isAppLimit && ((status === 429 && isGeminiLimit) || (status === 503 && isGeminiUnavailable));
+        return !isAppLimit && (isTemporaryServerIssue || (status === 429 && isGeminiLimit) || (status === 503 && isGeminiUnavailable));
+      }
+
+      function friendlyServerResponseMessage(status, responseText) {
+        const text = String(responseText || "").trim();
+        const lowerText = text.toLowerCase();
+        if (lowerText.includes("<!doctype") || lowerText.includes("<html")) {
+          if (lowerText.includes("continue with google") || lowerText.includes("secure google sign-in")) {
+            return "Your login session may have refreshed. Please sign in again, then send the message once more.";
+          }
+          return "Ved's server returned a web page instead of an AI reply. This usually happens during a deploy or cold start, so I will try another AI route when possible.";
+        }
+        if (status >= 500) {
+          return "Ved's server is temporarily unavailable. I will try another AI route when possible.";
+        }
+        if (status === 401 || status === 403) {
+          return "Please sign in again before chatting with Ved.";
+        }
+        return "Ved could not read the server reply clearly. Please refresh once if this repeats.";
       }
 
       function needsBackupWebSearch(message) {
@@ -4050,7 +4341,7 @@
           {
             role: "system",
             content:
-              `You are Ved, a friendly and professional AI assistant. Give complete, well-structured answers with practical details, examples, steps, or caveats when useful. Use headings, bullets, or numbered steps when they improve readability. Keep only greetings and very small questions brief. ` +
+              `You are Ved, a friendly and professional AI assistant. Give complete, well-structured answers with practical details, examples, steps, or caveats when useful. Use numbered points like 1., 2., 3., 4. wherever they fit naturally, especially for explanations, summaries, comparisons, image analysis, plans, and instructions. Keep only greetings and very small questions brief. ` +
               `If the user asks who created you, answer exactly: My creator is Vishal Raj,a student of class X B  SPSTDSC. ` +
               `Current user date/time: ${localNow} (${userTimezone}). ` +
               `Do not mention backup systems, rate limits, Gemini, or Puter. ` +
@@ -4289,6 +4580,7 @@
         const hasUserMessages = conversation.messages.some((message) => message.role === "user");
         mainPanel.classList.toggle("is-empty", !hasUserMessages);
         chatMessages.innerHTML = "";
+        let consumedAnimationFlag = false;
 
         if (!hasUserMessages) {
           const welcome = document.createElement("section");
@@ -4331,13 +4623,27 @@
         conversation.messages.forEach((message) => {
           const bubble = document.createElement("article");
           bubble.className = `message ${message.role === "user" ? "user" : "assistant"}`;
+          const assistantText = cleanAssistantText(message.content);
+          const isAssistant = message.role === "assistant";
+          const isLoading = isAssistant && (message.loading || assistantText === "Ved is thinking...");
+          if (message.animate) {
+            bubble.classList.add("is-new");
+            message.animate = false;
+            consumedAnimationFlag = true;
+          }
+          if (isLoading) {
+            bubble.classList.add("loading");
+          }
 
           const text = document.createElement("div");
           text.className = "message-text";
-          text.textContent =
-            message.role === "assistant"
-              ? cleanAssistantText(message.content) || "Ved could not show that reply. Please send the message again."
-              : String(message.content ?? "");
+          if (isLoading) {
+            renderThinkingLoader(text);
+          } else if (isAssistant) {
+            renderAssistantText(text, assistantText || "Ved could not show that reply. Please send the message again.");
+          } else {
+            text.textContent = String(message.content ?? "");
+          }
           bubble.appendChild(text);
 
           if (Array.isArray(message.attachments) && message.attachments.length) {
@@ -4394,7 +4700,127 @@
           chatMessages.appendChild(bubble);
         });
 
+        if (consumedAnimationFlag) {
+          saveConversations();
+        }
         chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      function renderThinkingLoader(container) {
+        const loader = document.createElement("span");
+        loader.className = "thinking-loader";
+        const label = document.createElement("span");
+        label.textContent = "Ved is thinking";
+        const dots = document.createElement("span");
+        dots.className = "thinking-dots";
+        dots.setAttribute("aria-hidden", "true");
+        dots.append(document.createElement("span"), document.createElement("span"), document.createElement("span"));
+        loader.append(label, dots);
+        container.appendChild(loader);
+      }
+
+      function renderAssistantText(container, value) {
+        const lines = String(value || "").replace(/\r\n/g, "\n").split("\n");
+        let paragraphLines = [];
+        let activeList = null;
+        let codeLines = [];
+        let inCodeBlock = false;
+
+        const flushParagraph = () => {
+          if (!paragraphLines.length) {
+            return;
+          }
+          const paragraph = document.createElement("p");
+          paragraph.textContent = paragraphLines.join(" ").trim();
+          container.appendChild(paragraph);
+          paragraphLines = [];
+        };
+
+        const flushList = () => {
+          activeList = null;
+        };
+
+        const flushCode = () => {
+          const pre = document.createElement("pre");
+          const code = document.createElement("code");
+          code.textContent = codeLines.join("\n");
+          pre.appendChild(code);
+          container.appendChild(pre);
+          codeLines = [];
+        };
+
+        lines.forEach((rawLine) => {
+          const line = rawLine.trim();
+          if (line.startsWith("```")) {
+            flushParagraph();
+            flushList();
+            if (inCodeBlock) {
+              flushCode();
+              inCodeBlock = false;
+            } else {
+              inCodeBlock = true;
+              codeLines = [];
+            }
+            return;
+          }
+
+          if (inCodeBlock) {
+            codeLines.push(rawLine);
+            return;
+          }
+
+          if (!line) {
+            flushParagraph();
+            flushList();
+            return;
+          }
+
+          const numberedMatch = line.match(/^(\d+)[.)]\s+(.+)$/);
+          const bulletMatch = line.match(/^[-*]\s+(.+)$/);
+
+          if (numberedMatch) {
+            flushParagraph();
+            if (!activeList || activeList.tagName !== "OL") {
+              activeList = document.createElement("ol");
+              activeList.start = Number.parseInt(numberedMatch[1], 10) || 1;
+              container.appendChild(activeList);
+            }
+            const item = document.createElement("li");
+            item.textContent = numberedMatch[2];
+            activeList.appendChild(item);
+            return;
+          }
+
+          if (bulletMatch) {
+            flushParagraph();
+            if (!activeList || activeList.tagName !== "UL") {
+              activeList = document.createElement("ul");
+              container.appendChild(activeList);
+            }
+            const item = document.createElement("li");
+            item.textContent = bulletMatch[1];
+            activeList.appendChild(item);
+            return;
+          }
+
+          flushList();
+          paragraphLines.push(line);
+        });
+
+        if (inCodeBlock) {
+          flushCode();
+        }
+        flushParagraph();
+
+        if (!container.children.length) {
+          const paragraph = document.createElement("p");
+          paragraph.textContent = String(value || "");
+          container.appendChild(paragraph);
+        }
+
+        Array.from(container.children).forEach((child, index) => {
+          child.style.setProperty("--line-delay", `${Math.min(index * 48, 360)}ms`);
+        });
       }
     }
   </script>
