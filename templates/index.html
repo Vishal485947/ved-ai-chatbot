@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ved AI Chatbot</title>
-  <meta name="ved-ui-version" content="time-greeting-cache-refresh-v2" />
+  <meta name="ved-ui-version" content="ved-canvas-v1" />
   <link rel="icon" href="{{ url_for('static', filename='ved-logo.svg') }}" type="image/svg+xml" />
   <style>
     * {
@@ -505,6 +505,66 @@
       white-space: pre-wrap;
     }
 
+    .canvas-image-card {
+      margin-top: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(108, 99, 255, 0.16);
+      border-radius: 20px;
+      background: #f8f7ff;
+    }
+
+    .canvas-image-card img {
+      display: block;
+      width: 100%;
+      max-height: 520px;
+      object-fit: contain;
+      background: #141827;
+    }
+
+    .canvas-image-meta {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .canvas-image-prompt {
+      margin: 0;
+      color: #4e5368;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .canvas-image-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .canvas-image-action {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 12px;
+      border: 1px solid #ded8f5;
+      border-radius: 12px;
+      background: #ffffff;
+      color: var(--brand-dark);
+      font-size: 13px;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .canvas-image-expired {
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px dashed rgba(108, 99, 255, 0.28);
+      border-radius: 16px;
+      background: #f8f7ff;
+      color: #687184;
+      font-size: 14px;
+    }
+
     .message.is-new {
       animation: messageRise 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
@@ -566,6 +626,17 @@
       from {
         opacity: 0;
         transform: translateY(14px) scale(0.985);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes menuLift {
+      from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
       }
       to {
         opacity: 1;
@@ -978,7 +1049,7 @@
 
     .composer-row {
       display: grid;
-      grid-template-columns: auto auto 1fr auto auto;
+      grid-template-columns: auto auto 1fr auto auto auto;
       gap: 8px;
       align-items: center;
     }
@@ -1017,6 +1088,113 @@
     .tool-button {
       min-width: 38px;
       padding: 0 12px;
+    }
+
+    .mode-picker {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .mode-picker-button {
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 13px;
+      border: 1px solid #dfddd4;
+      border-radius: 999px;
+      background: #faf8f2;
+      color: #4d493f;
+      font-size: 13px;
+      font-weight: 850;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .mode-picker-chevron {
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1;
+      transition: transform 0.18s ease;
+    }
+
+    .mode-picker.open .mode-picker-chevron {
+      transform: rotate(180deg);
+    }
+
+    .mode-picker-menu {
+      position: absolute;
+      right: 0;
+      bottom: calc(100% + 10px);
+      z-index: 30;
+      width: min(240px, calc(100vw - 32px));
+      display: grid;
+      gap: 6px;
+      padding: 8px;
+      border: 1px solid rgba(108, 99, 255, 0.16);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 22px 54px rgba(31, 36, 51, 0.18);
+      backdrop-filter: blur(18px);
+      transform-origin: bottom right;
+      animation: menuLift 0.18s ease both;
+    }
+
+    .mode-picker-menu[hidden] {
+      display: none;
+    }
+
+    .mode-option {
+      position: relative;
+      width: 100%;
+      min-height: 54px;
+      display: grid;
+      gap: 2px;
+      padding: 9px 34px 9px 12px;
+      border: 0;
+      border-radius: 14px;
+      background: transparent;
+      color: #25283a;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .mode-option span {
+      font-size: 14px;
+      font-weight: 850;
+    }
+
+    .mode-option small {
+      color: #6d7284;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .mode-option:hover,
+    .mode-option.active {
+      background: #f2efff;
+      color: var(--brand-dark);
+    }
+
+    .mode-option.active::after {
+      content: "";
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--brand);
+      transform: translateY(-50%);
+      box-shadow: 0 0 0 5px rgba(108, 99, 255, 0.14);
+    }
+
+    .mode-picker-button:focus-visible,
+    .mode-option:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
     }
 
     .voice-button {
@@ -1492,6 +1670,8 @@
     .workspace-select,
     .prompt-pill,
     .tool-button,
+    .mode-picker-button,
+    .mode-option,
     .voice-button,
     .send-button,
     .google-button,
@@ -1642,7 +1822,7 @@
     }
 
     .composer {
-      width: min(760px, calc(100% - 36px));
+      width: min(880px, calc(100% - 36px));
       margin-bottom: 28px;
       padding: 14px;
       border: 1px solid rgba(108, 99, 255, 0.16);
@@ -1667,6 +1847,21 @@
       border-color: transparent;
       background: #f2efff;
       color: #4e5368;
+    }
+
+    .mode-picker-button {
+      min-height: 42px;
+      border-color: transparent;
+      background: #f2efff;
+      color: #4e5368;
+      box-shadow: 0 10px 22px rgba(108, 99, 255, 0.06);
+    }
+
+    .mode-picker-button:hover,
+    .mode-picker.open .mode-picker-button {
+      background: linear-gradient(135deg, var(--brand), #3b82f6);
+      color: #ffffff;
+      box-shadow: 0 10px 22px rgba(108, 99, 255, 0.22);
     }
 
     .tool-button:hover,
@@ -1863,7 +2058,7 @@
 
     .capability-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
       gap: 16px;
       margin-top: 26px;
     }
@@ -2791,6 +2986,24 @@
         gap: 7px;
       }
 
+      .mode-picker {
+        grid-column: 1 / 4;
+        width: 100%;
+      }
+
+      .mode-picker-button {
+        width: 100%;
+        justify-content: space-between;
+        padding: 0 12px;
+      }
+
+      .mode-picker-menu {
+        left: 0;
+        right: auto;
+        width: min(270px, 100%);
+        transform-origin: bottom left;
+      }
+
       .composer input[type="text"] {
         min-width: 0;
         min-height: 46px;
@@ -2805,6 +3018,7 @@
       }
 
       .voice-button {
+        grid-column: 4;
         min-width: 42px;
         padding: 0;
       }
@@ -2901,6 +3115,7 @@
           <div class="login-badges" aria-label="Ved features">
             <span class="login-badge">Previous chats</span>
             <span class="login-badge">Real-time info</span>
+            <span class="login-badge">Ved Canvas</span>
             <span class="login-badge">Personal greeting</span>
           </div>
         </div>
@@ -2919,15 +3134,15 @@
                 Welcome back. I can help with questions, study notes, current facts, and ideas.
               </div>
               <div class="preview-message user-preview">
-                What changed today?
+                Create an image of a futuristic study desk.
               </div>
               <div class="preview-message assistant-preview">
-                I can check live information and share sources when they are available.
+                Switch to Ved Canvas, describe the image, and generate it from your prompt.
               </div>
             </div>
           </div>
           <p class="preview-footnote">
-            Built for focused conversations with saved history, Google login, and a cleaner chat experience.
+            Built for focused chat, saved history, uploads, live answers, and text-to-image creation.
           </p>
         </aside>
       </section>
@@ -2936,7 +3151,7 @@
         <p class="section-kicker">What Ved can do</p>
         <h2 id="capabilities-title" class="section-heading">A smoother AI workspace for study, research, and everyday questions.</h2>
         <p class="section-copy">
-          Ved combines chat, saved memory, real-time information, uploads, and project knowledge so the first screen is not just a login page. It explains, remembers, checks sources, and keeps useful work organized.
+          Ved combines chat, Ved Canvas, saved memory, real-time information, uploads, and project knowledge so the first screen is not just a login page. It explains, creates, remembers, checks sources, and keeps useful work organized.
         </p>
         <div class="capability-grid">
           <article class="capability-card">
@@ -2956,6 +3171,11 @@
           </article>
           <article class="capability-card">
             <span class="capability-icon" aria-hidden="true">04</span>
+            <h2>Ved Canvas</h2>
+            <p>Switch modes from the composer to create images from text prompts, then open or download the result.</p>
+          </article>
+          <article class="capability-card">
+            <span class="capability-icon" aria-hidden="true">05</span>
             <h2>Memory</h2>
             <p>Tell Ved what to remember and it can use those saved facts in future replies when relevant.</p>
           </article>
@@ -3054,7 +3274,7 @@
         <p class="section-kicker">Start with Ved</p>
         <h2 id="home-cta-title" class="section-heading">Sign in once. Keep your AI workspace ready.</h2>
         <p class="section-copy">
-          Use Ved for homework, coding questions, current information, image/document review, and saved project knowledge.
+          Use Ved for homework, coding questions, current information, image/document review, Ved Canvas image creation, and saved project knowledge.
         </p>
         <div class="cta-actions">
           <a class="google-button" href="{{ url_for('login') }}">
@@ -3106,6 +3326,7 @@
             <a class="footer-action" href="{{ url_for('login') }}" aria-label="Start a new Ved chat">New chat</a>
             <a class="footer-action" href="{{ url_for('login') }}" aria-label="Ask Ved for weather">Weather</a>
             <a class="footer-action" href="{{ url_for('login') }}" aria-label="Ask Ved for latest news">News</a>
+            <a class="footer-action" href="{{ url_for('login') }}" aria-label="Create images with Ved Canvas">Canvas</a>
             <a class="footer-action" href="{{ url_for('login') }}" aria-label="Use Ved projects">Projects</a>
             <a class="footer-action" href="{{ url_for('login') }}" aria-label="Upload a document or image in Ved">Uploads</a>
             <a class="footer-action" href="{{ url_for('login') }}" aria-label="Use Ved memory">Memory</a>
@@ -3113,7 +3334,7 @@
             <a class="footer-action" href="mailto:vishalraj99108@gmail.com" aria-label="Send email feedback about Ved">Feedback</a>
           </nav>
 
-          <p class="footer-note">Built as a personal AI workspace with accessible actions, saved context, and live information tools.</p>
+          <p class="footer-note">Built as a personal AI workspace with accessible actions, saved context, live information tools, and Ved Canvas.</p>
         </div>
       </footer>
     </main>
@@ -3264,6 +3485,41 @@
               placeholder="How can I help you today?"
               aria-label="Message Ved"
             />
+            <div id="modePicker" class="mode-picker">
+              <button
+                id="modePickerButton"
+                class="mode-picker-button"
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded="false"
+                aria-label="Choose Ved mode"
+              >
+                <span id="modePickerLabel">Ved</span>
+                <span class="mode-picker-chevron" aria-hidden="true">v</span>
+              </button>
+              <div id="modePickerMenu" class="mode-picker-menu" role="menu" hidden>
+                <button
+                  class="mode-option active"
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked="true"
+                  data-mode="chat"
+                >
+                  <span>Ved</span>
+                  <small>Chat assistant</small>
+                </button>
+                <button
+                  class="mode-option"
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked="false"
+                  data-mode="canvas"
+                >
+                  <span>Ved Canvas</span>
+                  <small>Create images</small>
+                </button>
+              </div>
+            </div>
             <button
               id="voiceButton"
               class="voice-button"
@@ -3313,11 +3569,17 @@
       const linkButton = document.querySelector("#linkButton");
       const fileInput = document.querySelector("#fileInput");
       const attachmentList = document.querySelector("#attachmentList");
+      const modePicker = document.querySelector("#modePicker");
+      const modePickerButton = document.querySelector("#modePickerButton");
+      const modePickerLabel = document.querySelector("#modePickerLabel");
+      const modePickerMenu = document.querySelector("#modePickerMenu");
+      const modeOptions = Array.from(document.querySelectorAll(".mode-option"));
       const voiceButton = document.querySelector("#voiceButton");
       const voiceStatus = document.querySelector("#voiceStatus");
       const mainPanel = document.querySelector(".main");
       const storageKey = `ved_conversations_${currentUser.email}`;
       const activeProjectStorageKey = `ved_active_project_${currentUser.email}`;
+      const assistantModeStorageKey = `ved_assistant_mode_${currentUser.email}`;
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const promptRecentMessageCount = 8;
@@ -3349,11 +3611,13 @@
       let silenceTimer = null;
       let lastVoiceSubmitText = "";
       let lastVoiceSubmitAt = 0;
+      let activeAssistantMode = localStorage.getItem(assistantModeStorageKey) === "canvas" ? "canvas" : "chat";
 
       renderConversationList();
       renderMessages();
       renderPendingAttachments();
       setupResponsiveWorkspaceTools();
+      updateAssistantMode(activeAssistantMode);
       setupVoiceInput();
       loadWorkspace();
       closeSidebar();
@@ -3379,6 +3643,52 @@
         if (event.key === "Escape" && appShell.classList.contains("sidebar-open")) {
           closeSidebar();
           sidebarToggle.focus();
+        }
+        if (event.key === "Escape" && modePicker.classList.contains("open")) {
+          setModeMenuOpen(false);
+          modePickerButton.focus();
+        }
+      });
+
+      modePickerButton.addEventListener("click", () => {
+        setModeMenuOpen(modePickerMenu.hidden);
+      });
+
+      modePickerButton.addEventListener("keydown", (event) => {
+        if (["ArrowDown", "Enter", " "].includes(event.key)) {
+          event.preventDefault();
+          setModeMenuOpen(true);
+          focusSelectedModeOption();
+        }
+      });
+
+      modeOptions.forEach((option, index) => {
+        option.addEventListener("click", () => {
+          updateAssistantMode(option.dataset.mode);
+          setModeMenuOpen(false);
+          messageInput.focus();
+        });
+
+        option.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            setModeMenuOpen(false);
+            modePickerButton.focus();
+            return;
+          }
+
+          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            const offset = event.key === "ArrowDown" ? 1 : -1;
+            const nextIndex = (index + offset + modeOptions.length) % modeOptions.length;
+            modeOptions[nextIndex].focus();
+          }
+        });
+      });
+
+      document.addEventListener("click", (event) => {
+        if (!modePicker.contains(event.target)) {
+          setModeMenuOpen(false);
         }
       });
 
@@ -3575,12 +3885,16 @@
         const text = messageInput.value.trim();
         if (!text && !pendingAttachments.length) return;
 
+        const modeForRequest = activeAssistantMode;
         const isVoiceMessage = submitNextAsVoice;
         submitNextAsVoice = false;
-        const attachmentsForRequest = [
-          ...pendingAttachments,
-          ...linksFromMessage(text, maxAttachmentCount - pendingAttachments.length),
-        ];
+        const attachmentsForRequest =
+          modeForRequest === "canvas"
+            ? []
+            : [
+                ...pendingAttachments,
+                ...linksFromMessage(text, maxAttachmentCount - pendingAttachments.length),
+              ];
         const attachmentSummaries = attachmentsForRequest.map(attachmentSummary);
         const userContent = text || "Please review the attachment.";
         pendingAttachments = [];
@@ -3604,6 +3918,27 @@
         renderConversationList();
         renderMessages();
 
+        if (modeForRequest === "chat" && isImageGenerationRequest(userContent)) {
+          const switchReply =
+            "1. To create images, select Ved Canvas from the mode button beside the microphone.\n" +
+            "2. Then describe the image you want and press Generate.\n" +
+            "3. Normal Ved is for chat, files, links, live information, and follow-up questions.";
+          conversation.messages.push({
+            role: "assistant",
+            content: switchReply,
+            animate: true,
+          });
+          conversation.updatedAt = new Date().toISOString();
+          saveConversations();
+          renderConversationList();
+          renderMessages();
+          if (isVoiceMessage) {
+            speakReply(switchReply);
+          }
+          messageInput.focus();
+          return;
+        }
+
         const sendButton = chatForm.querySelector(".send-button");
         const voiceWasDisabled = voiceButton.disabled;
         sendButton.disabled = true;
@@ -3614,12 +3949,20 @@
 
         let priorMessages = [];
         let longThinkingTimer = null;
-        const loading = { role: "assistant", content: "Ved is thinking...", loading: true, animate: true };
+        const loading = {
+          role: "assistant",
+          content: modeForRequest === "canvas" ? "Ved Canvas is creating your image..." : "Ved is thinking...",
+          loading: true,
+          animate: true,
+        };
         conversation.messages.push(loading);
         renderMessages();
         longThinkingTimer = window.setTimeout(() => {
           if (conversation.messages.includes(loading) && loading.loading) {
-            loading.content = "Ved is thinking a little longer";
+            loading.content =
+              modeForRequest === "canvas"
+                ? "Ved Canvas is creating the image a little longer"
+                : "Ved is thinking a little longer";
             renderMessages();
           }
         }, longThinkingDelayMs);
@@ -3627,6 +3970,30 @@
         try {
           const messagesForPrompt = conversation.messages.filter((message) => message !== loading);
           priorMessages = messagesForPrompt.slice(0, -1);
+
+          if (modeForRequest === "canvas") {
+            const canvasPrompt = extractCanvasPrompt(userContent);
+            const canvasImage = await generateCanvasImage(canvasPrompt);
+            const reply =
+              "1. Created in Ved Canvas.\n" +
+              `2. Prompt: ${canvasPrompt}\n` +
+              "3. Use Open or Download below the image to view or save it.";
+            conversation.messages = conversation.messages.filter((message) => message !== loading);
+            conversation.messages.push({
+              role: "assistant",
+              content: reply,
+              canvasImage: {
+                src: canvasImage.src,
+                prompt: canvasPrompt,
+              },
+              animate: true,
+            });
+            if (isVoiceMessage) {
+              speakReply("Created in Ved Canvas. The image is ready below.");
+            }
+            return;
+          }
+
           const history = priorMessages.slice(-promptRecentMessageCount);
           const contextSummary = summarizeHistoryForPrompt(
             priorMessages.slice(0, -promptRecentMessageCount)
@@ -3702,7 +4069,7 @@
           }
         } catch (error) {
           const errorText = cleanAssistantText(error?.message) || "Ved could not reply right now. Please try again.";
-          if (!attachmentsForRequest.length && shouldUseBackupAi(0, errorText)) {
+          if (modeForRequest !== "canvas" && !attachmentsForRequest.length && shouldUseBackupAi(0, errorText)) {
             try {
               const backupReply = await getBackupReply(userContent, priorMessages);
               conversation.messages = conversation.messages.filter((message) => message !== loading);
@@ -3730,12 +4097,79 @@
           renderMessages();
           sendButton.disabled = false;
           voiceButton.disabled = voiceWasDisabled;
-          attachButton.disabled = false;
-          linkButton.disabled = false;
           messageInput.disabled = false;
+          updateAssistantMode(activeAssistantMode);
           messageInput.focus();
         }
       });
+
+      function setModeMenuOpen(isOpen) {
+        modePicker.classList.toggle("open", isOpen);
+        modePickerMenu.hidden = !isOpen;
+        modePickerButton.setAttribute("aria-expanded", String(isOpen));
+      }
+
+      function focusSelectedModeOption() {
+        const selectedOption = modeOptions.find((option) => option.dataset.mode === activeAssistantMode);
+        (selectedOption || modeOptions[0])?.focus();
+      }
+
+      function modeLabel(mode) {
+        return mode === "canvas" ? "Ved Canvas" : "Ved";
+      }
+
+      function updateAssistantMode(mode) {
+        const normalizedMode = mode === "canvas" ? "canvas" : "chat";
+        const isCanvas = normalizedMode === "canvas";
+        activeAssistantMode = normalizedMode;
+        localStorage.setItem(assistantModeStorageKey, normalizedMode);
+        modePickerLabel.textContent = modeLabel(normalizedMode);
+        modePickerButton.setAttribute(
+          "aria-label",
+          `Choose Ved mode. Current mode: ${modeLabel(normalizedMode)}`
+        );
+
+        modeOptions.forEach((option) => {
+          const selected = option.dataset.mode === normalizedMode;
+          option.classList.toggle("active", selected);
+          option.setAttribute("aria-checked", String(selected));
+        });
+
+        messageInput.placeholder = isCanvas
+          ? "Describe the image you want Ved Canvas to create..."
+          : "How can I help you today?";
+        messageInput.setAttribute(
+          "aria-label",
+          isCanvas ? "Describe an image for Ved Canvas" : "Message Ved"
+        );
+
+        const sendButton = chatForm.querySelector(".send-button");
+        sendButton.textContent = isCanvas ? "Generate" : "Send";
+        sendButton.setAttribute("aria-label", isCanvas ? "Generate image with Ved Canvas" : "Send message");
+
+        if (isCanvas && pendingAttachments.length) {
+          pendingAttachments = [];
+          renderPendingAttachments();
+          setVoiceStatus("Ved Canvas uses text prompts only, so pending attachments were cleared.");
+        } else if (isCanvas && !voiceStatus.textContent) {
+          setVoiceStatus("Ved Canvas is ready for image prompts.");
+        } else if (!isCanvas && voiceStatus.textContent === "Ved Canvas is ready for image prompts.") {
+          setVoiceStatus("");
+        }
+
+        attachButton.disabled = isCanvas || messageInput.disabled;
+        linkButton.disabled = isCanvas || messageInput.disabled;
+        attachButton.title = isCanvas ? "Ved Canvas uses text prompts only" : "Upload an image or document";
+        linkButton.title = isCanvas ? "Ved Canvas uses text prompts only" : "Add a web link";
+        attachButton.setAttribute(
+          "aria-label",
+          isCanvas ? "Uploads are unavailable in Ved Canvas" : "Upload an image or document"
+        );
+        linkButton.setAttribute(
+          "aria-label",
+          isCanvas ? "Links are unavailable in Ved Canvas" : "Add a web link"
+        );
+      }
 
       function openSidebar() {
         appShell.classList.add("sidebar-open");
@@ -4395,6 +4829,96 @@
         return normalized.includes(currentYear) || searchTriggers.some((trigger) => normalized.includes(trigger));
       }
 
+      function isImageGenerationRequest(message) {
+        const normalized = ` ${String(message || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, " ")} `;
+        const actionTriggers = [
+          " create ",
+          " generate ",
+          " make ",
+          " draw ",
+          " design ",
+          " render ",
+          " paint ",
+          " produce ",
+        ];
+        const imageTerms = [
+          " image ",
+          " images ",
+          " picture ",
+          " pictures ",
+          " photo ",
+          " photos ",
+          " poster ",
+          " logo ",
+          " illustration ",
+          " artwork ",
+          " wallpaper ",
+          " avatar ",
+          " banner ",
+          " thumbnail ",
+        ];
+
+        return (
+          actionTriggers.some((trigger) => normalized.includes(trigger)) &&
+          imageTerms.some((term) => normalized.includes(term))
+        );
+      }
+
+      function extractCanvasPrompt(message) {
+        const prompt = String(message || "")
+          .replace(
+            /^\s*(please\s+)?(create|generate|make|draw|design|render|paint|produce)\s+(an?\s+)?(image|picture|photo|poster|logo|illustration|artwork|wallpaper|avatar|banner|thumbnail)?\s*(of|for|showing|about)?\s*/i,
+            ""
+          )
+          .replace(/\s+/g, " ")
+          .trim();
+
+        const finalPrompt = prompt || String(message || "").replace(/\s+/g, " ").trim();
+        if (finalPrompt.length < 3) {
+          throw new Error("1. Please describe the image you want Ved Canvas to create.\n2. Example: a modern blue logo for Ved AI on a clean white background.");
+        }
+        return finalPrompt;
+      }
+
+      async function generateCanvasImage(prompt) {
+        if (!window.puter?.ai?.txt2img) {
+          throw new Error("1. Ved Canvas is still loading the image generator.\n2. Refresh the page, wait a few seconds, then try again.");
+        }
+
+        const response = await window.puter.ai.txt2img(prompt);
+        const candidates = Array.isArray(response) ? response : [response];
+        let src = "";
+
+        for (const candidate of candidates) {
+          if (typeof candidate === "string" && candidate.trim()) {
+            src = candidate.trim();
+            break;
+          }
+          if (candidate?.src) {
+            src = candidate.src;
+            break;
+          }
+          if (candidate?.url) {
+            src = candidate.url;
+            break;
+          }
+          if (candidate?.data) {
+            src = String(candidate.data).startsWith("data:")
+              ? candidate.data
+              : `data:image/png;base64,${candidate.data}`;
+            break;
+          }
+        }
+
+        if (!src) {
+          throw new Error("1. Ved Canvas could not return an image this time.\n2. Try a more specific prompt with subject, style, colors, and background.");
+        }
+
+        return { src };
+      }
+
       function normalizePuterReply(response) {
         return cleanAssistantText(response);
       }
@@ -4594,7 +5118,25 @@
       }
 
       function saveConversations() {
-        localStorage.setItem(storageKey, JSON.stringify(conversations));
+        localStorage.setItem(storageKey, JSON.stringify(conversations.map(sanitizeConversationForStorage)));
+      }
+
+      function sanitizeConversationForStorage(conversation) {
+        return {
+          ...conversation,
+          messages: (conversation.messages || []).map(sanitizeMessageForStorage),
+        };
+      }
+
+      function sanitizeMessageForStorage(message) {
+        const copy = { ...message };
+        if (copy.canvasImage?.src && /^(data|blob):/i.test(copy.canvasImage.src)) {
+          copy.canvasImage = {
+            prompt: copy.canvasImage.prompt || "",
+            expired: true,
+          };
+        }
+        return copy;
       }
 
       function createConversation() {
@@ -4816,6 +5358,10 @@
             bubble.appendChild(tag);
           }
 
+          if (message.role === "assistant" && message.canvasImage) {
+            renderCanvasImage(bubble, message.canvasImage);
+          }
+
           if (message.role === "assistant" && Array.isArray(message.sources) && message.sources.length) {
             const sources = document.createElement("section");
             sources.className = "sources";
@@ -4855,6 +5401,55 @@
           saveConversations();
         }
         chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      function renderCanvasImage(bubble, canvasImage) {
+        if (!canvasImage?.src || canvasImage.expired) {
+          const expired = document.createElement("div");
+          expired.className = "canvas-image-expired";
+          expired.textContent = "This Ved Canvas preview was not saved after reload. Generate it again to view or download it.";
+          bubble.appendChild(expired);
+          return;
+        }
+
+        const figure = document.createElement("figure");
+        figure.className = "canvas-image-card";
+
+        const image = document.createElement("img");
+        image.src = canvasImage.src;
+        image.alt = `Ved Canvas generated image${canvasImage.prompt ? ` for: ${canvasImage.prompt}` : ""}`;
+        image.loading = "lazy";
+        image.decoding = "async";
+
+        const meta = document.createElement("figcaption");
+        meta.className = "canvas-image-meta";
+
+        const prompt = document.createElement("p");
+        prompt.className = "canvas-image-prompt";
+        prompt.textContent = canvasImage.prompt ? `Prompt: ${canvasImage.prompt}` : "Generated with Ved Canvas.";
+
+        const actions = document.createElement("div");
+        actions.className = "canvas-image-actions";
+
+        const openLink = document.createElement("a");
+        openLink.className = "canvas-image-action";
+        openLink.href = canvasImage.src;
+        openLink.target = "_blank";
+        openLink.rel = "noreferrer";
+        openLink.textContent = "Open";
+        openLink.setAttribute("aria-label", "Open Ved Canvas image in a new tab");
+
+        const downloadLink = document.createElement("a");
+        downloadLink.className = "canvas-image-action";
+        downloadLink.href = canvasImage.src;
+        downloadLink.download = "ved-canvas.png";
+        downloadLink.textContent = "Download";
+        downloadLink.setAttribute("aria-label", "Download Ved Canvas image");
+
+        actions.append(openLink, downloadLink);
+        meta.append(prompt, actions);
+        figure.append(image, meta);
+        bubble.appendChild(figure);
       }
 
       function renderThinkingLoader(container, labelText = "Ved is thinking") {

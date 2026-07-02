@@ -764,6 +764,39 @@ def asks_about_creator(message):
     return any(phrase in normalized for phrase in creator_phrases)
 
 
+def is_image_generation_request(message):
+    normalized = f" {re.sub(r'[^a-z0-9]+', ' ', (message or '').lower())} "
+    action_triggers = [
+        " create ",
+        " generate ",
+        " make ",
+        " draw ",
+        " design ",
+        " render ",
+        " paint ",
+        " produce ",
+    ]
+    image_terms = [
+        " image ",
+        " images ",
+        " picture ",
+        " pictures ",
+        " photo ",
+        " photos ",
+        " poster ",
+        " logo ",
+        " illustration ",
+        " artwork ",
+        " wallpaper ",
+        " avatar ",
+        " banner ",
+        " thumbnail ",
+    ]
+    return any(trigger in normalized for trigger in action_triggers) and any(
+        term in normalized for term in image_terms
+    )
+
+
 def fetch_url_bytes(url, timeout=8):
     request = Request(
         url,
@@ -1786,6 +1819,18 @@ def chat():
     if asks_about_creator(user_message):
         return jsonify({
             "reply": "My creator is Vishal Raj,a student of class X B  SPSTDSC",
+            "sources": [],
+            "searchHtml": "",
+            "memorySaved": saved_memory,
+        })
+
+    if is_image_generation_request(user_message):
+        return jsonify({
+            "reply": (
+                "1. To create images, select Ved Canvas from the mode button beside the microphone.\n"
+                "2. Then describe the image you want and press Generate.\n"
+                "3. Normal Ved is for chat, files, links, live information, and follow-up questions."
+            ),
             "sources": [],
             "searchHtml": "",
             "memorySaved": saved_memory,
