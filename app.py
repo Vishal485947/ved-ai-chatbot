@@ -1631,6 +1631,14 @@ def looks_like_no_live_access_reply(answer):
 
 
 def quick_local_reply(message, user_name):
+    raw_message = str(message or "")
+    if (
+        re.search(r"(भारत|इंडिया)", raw_message)
+        and re.search(r"(पीएम|प्रधानमंत्री|प्रधान मंत्री)", raw_message)
+        and re.search(r"(कौन|कौन है|बताओ|है)", raw_message)
+    ):
+        return "भारत के प्रधानमंत्री नरेंद्र मोदी हैं."
+
     if not is_plain_english_message(message):
         return ""
 
@@ -1640,6 +1648,19 @@ def quick_local_reply(message, user_name):
     )
     words = [word for word in normalized.split() if word not in {"ved", "assistant"}]
     greeting_words = {"hi", "hello", "hey", "hii", "helo"}
+
+    asks_india_pm = (
+        {"india", "indian", "bharat"} & set(words)
+        and {"pm", "prime", "minister", "pradhan", "mantri"} & set(words)
+        and (
+            {"who", "what", "kon", "kaun", "koun", "ka", "hai", "he"} & set(words)
+            or "prime minister" in normalized
+        )
+    )
+    if asks_india_pm:
+        if {"ka", "hai", "kon", "kaun", "koun"} & set(words):
+            return "India ke Prime Minister Narendra Modi hain."
+        return "The Prime Minister of India is Narendra Modi."
 
     if words and len(words) <= 3 and all(word in greeting_words for word in words):
         name = (user_name or "there").split()[0]
