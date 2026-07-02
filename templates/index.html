@@ -565,6 +565,38 @@
       font-size: 14px;
     }
 
+    .canvas-deck-card {
+      margin-top: 14px;
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid rgba(108, 99, 255, 0.16);
+      border-radius: 20px;
+      background: linear-gradient(135deg, #f8f7ff, #ffffff);
+    }
+
+    .canvas-deck-title {
+      margin: 0;
+      color: #25283a;
+      font-size: 16px;
+      font-weight: 850;
+    }
+
+    .canvas-deck-meta {
+      margin: 0;
+      color: #687184;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .canvas-deck-slide-list {
+      margin: 0;
+      padding-left: 1.2rem;
+      color: #3f4658;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
     .message.is-new {
       animation: messageRise 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
@@ -1127,8 +1159,8 @@
     .mode-picker-menu {
       position: absolute;
       right: 0;
-      bottom: calc(100% + 10px);
-      z-index: 30;
+      top: calc(100% + 10px);
+      z-index: 90;
       width: min(240px, calc(100vw - 32px));
       display: grid;
       gap: 6px;
@@ -1138,7 +1170,7 @@
       background: rgba(255, 255, 255, 0.98);
       box-shadow: 0 22px 54px rgba(31, 36, 51, 0.18);
       backdrop-filter: blur(18px);
-      transform-origin: bottom right;
+      transform-origin: top right;
       animation: menuLift 0.18s ease both;
     }
 
@@ -3001,7 +3033,7 @@
         left: 0;
         right: auto;
         width: min(270px, 100%);
-        transform-origin: bottom left;
+        transform-origin: top left;
       }
 
       .composer input[type="text"] {
@@ -3115,7 +3147,7 @@
           <div class="login-badges" aria-label="Ved features">
             <span class="login-badge">Previous chats</span>
             <span class="login-badge">Real-time info</span>
-            <span class="login-badge">Ved Canvas</span>
+            <span class="login-badge">Canvas images and PPTs</span>
             <span class="login-badge">Personal greeting</span>
           </div>
         </div>
@@ -3134,15 +3166,15 @@
                 Welcome back. I can help with questions, study notes, current facts, and ideas.
               </div>
               <div class="preview-message user-preview">
-                Create an image of a futuristic study desk.
+                Create a PPT about renewable energy.
               </div>
               <div class="preview-message assistant-preview">
-                Switch to Ved Canvas, describe the image, and generate it from your prompt.
+                Switch to Ved Canvas, describe the PPT, and download the generated presentation.
               </div>
             </div>
           </div>
           <p class="preview-footnote">
-            Built for focused chat, saved history, uploads, live answers, and text-to-image creation.
+            Built for focused chat, saved history, uploads, live answers, text-to-image creation, and PPT generation.
           </p>
         </aside>
       </section>
@@ -3151,7 +3183,7 @@
         <p class="section-kicker">What Ved can do</p>
         <h2 id="capabilities-title" class="section-heading">A smoother AI workspace for study, research, and everyday questions.</h2>
         <p class="section-copy">
-          Ved combines chat, Ved Canvas, saved memory, real-time information, uploads, and project knowledge so the first screen is not just a login page. It explains, creates, remembers, checks sources, and keeps useful work organized.
+          Ved combines chat, Ved Canvas, saved memory, real-time information, uploads, and project knowledge so the first screen is not just a login page. It explains, creates images and PPTs, remembers, checks sources, and keeps useful work organized.
         </p>
         <div class="capability-grid">
           <article class="capability-card">
@@ -3172,7 +3204,7 @@
           <article class="capability-card">
             <span class="capability-icon" aria-hidden="true">04</span>
             <h2>Ved Canvas</h2>
-            <p>Switch modes from the composer to create images from text prompts, then open or download the result.</p>
+            <p>Switch modes from the composer to create images or downloadable PPT presentations from text prompts.</p>
           </article>
           <article class="capability-card">
             <span class="capability-icon" aria-hidden="true">05</span>
@@ -3274,7 +3306,7 @@
         <p class="section-kicker">Start with Ved</p>
         <h2 id="home-cta-title" class="section-heading">Sign in once. Keep your AI workspace ready.</h2>
         <p class="section-copy">
-          Use Ved for homework, coding questions, current information, image/document review, Ved Canvas image creation, and saved project knowledge.
+          Use Ved for homework, coding questions, current information, image/document review, Ved Canvas image/PPT creation, and saved project knowledge.
         </p>
         <div class="cta-actions">
           <a class="google-button" href="{{ url_for('login') }}">
@@ -3326,7 +3358,7 @@
             <a class="footer-action" href="{{ url_for('login') }}" aria-label="Start a new Ved chat">New chat</a>
             <a class="footer-action" href="{{ url_for('login') }}" aria-label="Ask Ved for weather">Weather</a>
             <a class="footer-action" href="{{ url_for('login') }}" aria-label="Ask Ved for latest news">News</a>
-            <a class="footer-action" href="{{ url_for('login') }}" aria-label="Create images with Ved Canvas">Canvas</a>
+            <a class="footer-action" href="{{ url_for('login') }}" aria-label="Create images or PPTs with Ved Canvas">Canvas</a>
             <a class="footer-action" href="{{ url_for('login') }}" aria-label="Use Ved projects">Projects</a>
             <a class="footer-action" href="{{ url_for('login') }}" aria-label="Upload a document or image in Ved">Uploads</a>
             <a class="footer-action" href="{{ url_for('login') }}" aria-label="Use Ved memory">Memory</a>
@@ -3334,7 +3366,7 @@
             <a class="footer-action" href="mailto:vishalraj99108@gmail.com" aria-label="Send email feedback about Ved">Feedback</a>
           </nav>
 
-          <p class="footer-note">Built as a personal AI workspace with accessible actions, saved context, live information tools, and Ved Canvas.</p>
+          <p class="footer-note">Built as a personal AI workspace with accessible actions, saved context, live information tools, and Ved Canvas for images and PPTs.</p>
         </div>
       </footer>
     </main>
@@ -3516,7 +3548,7 @@
                   data-mode="canvas"
                 >
                   <span>Ved Canvas</span>
-                  <small>Create images</small>
+                  <small>Create images or PPTs</small>
                 </button>
               </div>
             </div>
@@ -3919,10 +3951,14 @@
         renderConversationList();
         renderMessages();
 
-        if (modeForRequest === "chat" && isImageGenerationRequest(userContent)) {
+        const isCanvasPresentation = modeForRequest === "canvas" && isPresentationGenerationRequest(userContent);
+        if (
+          modeForRequest === "chat" &&
+          (isImageGenerationRequest(userContent) || isPresentationGenerationRequest(userContent))
+        ) {
           const switchReply =
-            "1. To create images, select Ved Canvas from the mode button beside the microphone.\n" +
-            "2. Then describe the image you want and press Generate.\n" +
+            "1. To create images or PPT presentations, select Ved Canvas from the mode button beside the microphone.\n" +
+            "2. Then describe the image or PPT you want and press Generate.\n" +
             "3. Normal Ved is for chat, files, links, live information, and follow-up questions.";
           conversation.messages.push({
             role: "assistant",
@@ -3952,7 +3988,12 @@
         let longThinkingTimer = null;
         const loading = {
           role: "assistant",
-          content: modeForRequest === "canvas" ? "Ved Canvas is creating your image..." : "Ved is thinking...",
+          content:
+            modeForRequest === "canvas"
+              ? isCanvasPresentation
+                ? "Ved Canvas is creating your PPT..."
+                : "Ved Canvas is creating your image..."
+              : "Ved is thinking...",
           loading: true,
           animate: true,
         };
@@ -3962,7 +4003,9 @@
           if (conversation.messages.includes(loading) && loading.loading) {
             loading.content =
               modeForRequest === "canvas"
-                ? "Ved Canvas is creating the image a little longer"
+                ? isCanvasPresentation
+                  ? "Ved Canvas is creating the PPT a little longer"
+                  : "Ved Canvas is creating the image a little longer"
                 : "Ved is thinking a little longer";
             renderMessages();
           }
@@ -3973,6 +4016,27 @@
           priorMessages = messagesForPrompt.slice(0, -1);
 
           if (modeForRequest === "canvas") {
+            if (isCanvasPresentation) {
+              const presentationPrompt = extractPresentationPrompt(userContent);
+              const pptDeck = await generatePresentationDeck(presentationPrompt);
+              const reply =
+                "1. Created a PPT in Ved Canvas.\n" +
+                `2. Topic: ${pptDeck.title}\n` +
+                `3. Slides: ${pptDeck.slideCount}\n` +
+                "4. Use Download PPT below to save it.";
+              conversation.messages = conversation.messages.filter((message) => message !== loading);
+              conversation.messages.push({
+                role: "assistant",
+                content: reply,
+                pptDeck,
+                animate: true,
+              });
+              if (isVoiceMessage) {
+                speakReply("Created the PPT in Ved Canvas. The download button is ready below.");
+              }
+              return;
+            }
+
             const canvasPrompt = extractCanvasPrompt(userContent);
             const canvasImage = await generateCanvasImage(canvasPrompt);
             const reply =
@@ -4137,31 +4201,31 @@
         });
 
         messageInput.placeholder = isCanvas
-          ? "Describe the image you want Ved Canvas to create..."
+          ? "Describe the image or PPT you want Ved Canvas to create..."
           : "How can I help you today?";
         messageInput.setAttribute(
           "aria-label",
-          isCanvas ? "Describe an image for Ved Canvas" : "Message Ved"
+          isCanvas ? "Describe an image or PPT for Ved Canvas" : "Message Ved"
         );
 
         const sendButton = chatForm.querySelector(".send-button");
         sendButton.textContent = isCanvas ? "Generate" : "Send";
-        sendButton.setAttribute("aria-label", isCanvas ? "Generate image with Ved Canvas" : "Send message");
+        sendButton.setAttribute("aria-label", isCanvas ? "Generate with Ved Canvas" : "Send message");
 
         if (isCanvas && pendingAttachments.length) {
           pendingAttachments = [];
           renderPendingAttachments();
-          setVoiceStatus("Ved Canvas uses text prompts only, so pending attachments were cleared.");
+          setVoiceStatus("Ved Canvas uses text prompts only for images and PPTs, so pending attachments were cleared.");
         } else if (isCanvas && !voiceStatus.textContent) {
-          setVoiceStatus("Ved Canvas is ready for image prompts.");
-        } else if (!isCanvas && voiceStatus.textContent === "Ved Canvas is ready for image prompts.") {
+          setVoiceStatus("Ved Canvas is ready for image or PPT prompts.");
+        } else if (!isCanvas && voiceStatus.textContent === "Ved Canvas is ready for image or PPT prompts.") {
           setVoiceStatus("");
         }
 
         attachButton.disabled = isCanvas || messageInput.disabled;
         linkButton.disabled = isCanvas || messageInput.disabled;
-        attachButton.title = isCanvas ? "Ved Canvas uses text prompts only" : "Upload an image or document";
-        linkButton.title = isCanvas ? "Ved Canvas uses text prompts only" : "Add a web link";
+        attachButton.title = isCanvas ? "Ved Canvas uses text prompts only for images and PPTs" : "Upload an image or document";
+        linkButton.title = isCanvas ? "Ved Canvas uses text prompts only for images and PPTs" : "Add a web link";
         attachButton.setAttribute(
           "aria-label",
           isCanvas ? "Uploads are unavailable in Ved Canvas" : "Upload an image or document"
@@ -4890,6 +4954,36 @@
         );
       }
 
+      function isPresentationGenerationRequest(message) {
+        const normalized = ` ${String(message || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, " ")} `;
+        const presentationTerms = [
+          " ppt ",
+          " pptx ",
+          " powerpoint ",
+          " presentation ",
+          " presentations ",
+          " slide ",
+          " slides ",
+          " slide deck ",
+          " deck ",
+        ];
+        const actionTriggers = [
+          " create ",
+          " generate ",
+          " make ",
+          " build ",
+          " design ",
+          " prepare ",
+        ];
+
+        return (
+          presentationTerms.some((term) => normalized.includes(term)) &&
+          actionTriggers.some((trigger) => normalized.includes(trigger))
+        );
+      }
+
       function extractCanvasPrompt(message) {
         const prompt = String(message || "")
           .replace(
@@ -4902,6 +4996,22 @@
         const finalPrompt = prompt || String(message || "").replace(/\s+/g, " ").trim();
         if (finalPrompt.length < 3) {
           throw new Error("1. Please describe the image you want Ved Canvas to create.\n2. Example: a modern blue logo for Ved AI on a clean white background.");
+        }
+        return finalPrompt;
+      }
+
+      function extractPresentationPrompt(message) {
+        const prompt = String(message || "")
+          .replace(
+            /^\s*(please\s+)?(create|generate|make|build|design|prepare)\s+(a\s+|an\s+)?(pptx?|powerpoint|presentation|slide\s+deck|deck|slides?)\s*(about|on|for|of)?\s*/i,
+            ""
+          )
+          .replace(/\s+/g, " ")
+          .trim();
+
+        const finalPrompt = prompt || String(message || "").replace(/\s+/g, " ").trim();
+        if (finalPrompt.length < 3) {
+          throw new Error("1. Please describe the PPT you want Ved Canvas to create.\n2. Example: a 6-slide presentation about renewable energy for class 10.");
         }
         return finalPrompt;
       }
@@ -4959,6 +5069,311 @@
         }
 
         return { src };
+      }
+
+      async function generatePresentationDeck(prompt) {
+        const plan = await buildPresentationPlan(prompt);
+        const normalizedPlan = normalizePresentationPlan(plan, prompt);
+        const pptBlob = createPptxBlob(normalizedPlan);
+        const url = URL.createObjectURL(pptBlob);
+        return {
+          title: normalizedPlan.title,
+          prompt,
+          slideCount: normalizedPlan.slides.length,
+          slides: normalizedPlan.slides.map((slide) => slide.title),
+          url,
+          filename: slugifyFileName(normalizedPlan.title || "ved-canvas-presentation") + ".pptx",
+        };
+      }
+
+      async function buildPresentationPlan(prompt) {
+        if (window.puter?.ai?.chat) {
+          try {
+            const outlinePrompt =
+              "Create a concise PowerPoint outline from this user request. " +
+              "Return only valid JSON with this exact shape: " +
+              "{\"title\":\"...\",\"subtitle\":\"...\",\"slides\":[{\"title\":\"...\",\"bullets\":[\"...\",\"...\",\"...\"]}]}. " +
+              "Use 5 to 7 slides. Keep bullet text short and presentation-ready. " +
+              `User request: ${compactForPrompt(prompt, 900)}`;
+            const reply = await tryPuterReply(
+              [
+                {
+                  role: "system",
+                  content:
+                    "You create structured presentation outlines. Return JSON only, with no markdown fences or extra text.",
+                },
+                { role: "user", content: outlinePrompt },
+              ],
+              { max_tokens: 900, temperature: 0.35, model: backupTextModel },
+              true
+            );
+            const parsed = parseJsonObjectFromText(reply);
+            if (parsed) {
+              return parsed;
+            }
+          } catch {
+            // Fall back to a deterministic outline below.
+          }
+        }
+
+        return fallbackPresentationPlan(prompt);
+      }
+
+      function parseJsonObjectFromText(value) {
+        const text = cleanAssistantText(value).replace(/^```(?:json)?\s*/i, "").replace(/```$/i, "").trim();
+        const start = text.indexOf("{");
+        const end = text.lastIndexOf("}");
+        if (start < 0 || end <= start) {
+          return null;
+        }
+        try {
+          return JSON.parse(text.slice(start, end + 1));
+        } catch {
+          return null;
+        }
+      }
+
+      function fallbackPresentationPlan(prompt) {
+        const topic = titleCase(compactForPrompt(prompt, 72) || "Ved Canvas Presentation");
+        return {
+          title: topic,
+          subtitle: "Generated by Ved Canvas",
+          slides: [
+            { title: "Overview", bullets: [`Main topic: ${topic}`, "Purpose and audience", "What this deck will cover"] },
+            { title: "Key Background", bullets: ["Important context", "Why the topic matters", "Current or useful facts"] },
+            { title: "Main Points", bullets: ["Core idea 1", "Core idea 2", "Core idea 3"] },
+            { title: "Examples and Details", bullets: ["Practical example", "Relevant details", "How to explain it clearly"] },
+            { title: "Conclusion", bullets: ["Summary of the topic", "Important takeaway", "Suggested next step"] },
+          ],
+        };
+      }
+
+      function normalizePresentationPlan(plan, prompt) {
+        const fallback = fallbackPresentationPlan(prompt);
+        const title = compactForPrompt(plan?.title || fallback.title, 80);
+        const subtitle = compactForPrompt(plan?.subtitle || "Generated by Ved Canvas", 120);
+        const rawSlides = Array.isArray(plan?.slides) && plan.slides.length ? plan.slides : fallback.slides;
+        const slides = rawSlides
+          .slice(0, 8)
+          .map((slide, index) => {
+            const bullets = Array.isArray(slide?.bullets) ? slide.bullets : [];
+            return {
+              title: compactForPrompt(slide?.title || `Slide ${index + 1}`, 72),
+              bullets: bullets
+                .map((bullet) => compactForPrompt(bullet, 110))
+                .filter(Boolean)
+                .slice(0, 5),
+            };
+          })
+          .filter((slide) => slide.title);
+
+        return {
+          title,
+          subtitle,
+          slides: slides.length ? slides : fallback.slides,
+        };
+      }
+
+      function createPptxBlob(plan) {
+        const slides = plan.slides.map((slide, index) => pptSlideXml(slide, index, plan));
+        const slideOverrides = slides
+          .map((_, index) => `<Override PartName="/ppt/slides/slide${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`)
+          .join("");
+        const slideIds = slides
+          .map((_, index) => `<p:sldId id="${256 + index}" r:id="rId${index + 1}"/>`)
+          .join("");
+        const slideRels = slides
+          .map((_, index) => `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${index + 1}.xml"/>`)
+          .join("");
+
+        const entries = [
+          {
+            name: "[Content_Types].xml",
+            content:
+              `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+              `<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">` +
+              `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
+              `<Default Extension="xml" ContentType="application/xml"/>` +
+              `<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>` +
+              `<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>` +
+              `<Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>` +
+              slideOverrides +
+              `</Types>`,
+          },
+          {
+            name: "_rels/.rels",
+            content:
+              `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+              `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+              `<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>` +
+              `<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>` +
+              `<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>` +
+              `</Relationships>`,
+          },
+          {
+            name: "docProps/core.xml",
+            content:
+              `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+              `<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">` +
+              `<dc:title>${escapeXml(plan.title)}</dc:title><dc:creator>Ved Canvas</dc:creator>` +
+              `<cp:lastModifiedBy>Ved Canvas</cp:lastModifiedBy><dcterms:created xsi:type="dcterms:W3CDTF">${new Date().toISOString()}</dcterms:created>` +
+              `</cp:coreProperties>`,
+          },
+          {
+            name: "docProps/app.xml",
+            content:
+              `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+              `<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">` +
+              `<Application>Ved Canvas</Application><PresentationFormat>On-screen Show (16:9)</PresentationFormat><Slides>${slides.length}</Slides>` +
+              `</Properties>`,
+          },
+          {
+            name: "ppt/presentation.xml",
+            content:
+              `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+              `<p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">` +
+              `<p:sldIdLst>${slideIds}</p:sldIdLst><p:sldSz cx="12192000" cy="6858000" type="screen16x9"/><p:notesSz cx="6858000" cy="9144000"/>` +
+              `</p:presentation>`,
+          },
+          {
+            name: "ppt/_rels/presentation.xml.rels",
+            content:
+              `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+              `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${slideRels}</Relationships>`,
+          },
+          ...slides.map((content, index) => ({ name: `ppt/slides/slide${index + 1}.xml`, content })),
+        ];
+
+        return createZipBlob(entries, "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+      }
+
+      function pptSlideXml(slide, index, plan) {
+        const title = index === 0 ? plan.title : slide.title;
+        const bullets = index === 0 ? [plan.subtitle, ...slide.bullets].slice(0, 4) : slide.bullets;
+        const bulletParagraphs = bullets
+          .map((bullet) => `<a:p><a:pPr marL="342900" indent="-171450"><a:buChar char="&#8226;"/></a:pPr><a:r><a:rPr lang="en-US" sz="2200"/><a:t>${escapeXml(bullet)}</a:t></a:r></a:p>`)
+          .join("");
+
+        return (
+          `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+          `<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">` +
+          `<p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val="${index % 2 === 0 ? "F8F7FF" : "F2FBF9"}"/></a:solidFill></p:bgPr></p:bg><p:spTree>` +
+          `<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>` +
+          pptTextShape(2, "Title", 685800, 548640, 10820400, 1051560, title, 3600, true) +
+          pptBulletsShape(3, "Body", 914400, 1828800, 10363200, 3657600, bulletParagraphs) +
+          pptTextShape(4, "Footer", 914400, 6172200, 10363200, 365760, "Generated by Ved Canvas", 1200, false) +
+          `</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`
+        );
+      }
+
+      function pptTextShape(id, name, x, y, cx, cy, text, size, bold) {
+        return (
+          `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${name}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>` +
+          `<p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>` +
+          `<p:txBody><a:bodyPr wrap="square"/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US" sz="${size}"${bold ? ' b="1"' : ""}/><a:t>${escapeXml(text)}</a:t></a:r></a:p></p:txBody></p:sp>`
+        );
+      }
+
+      function pptBulletsShape(id, name, x, y, cx, cy, paragraphs) {
+        return (
+          `<p:sp><p:nvSpPr><p:cNvPr id="${id}" name="${name}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>` +
+          `<p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>` +
+          `<p:txBody><a:bodyPr wrap="square"/><a:lstStyle/>${paragraphs || "<a:p/>"}</p:txBody></p:sp>`
+        );
+      }
+
+      function createZipBlob(entries, mimeType) {
+        const encoder = new TextEncoder();
+        const fileParts = [];
+        const centralParts = [];
+        let offset = 0;
+        const now = new Date();
+        const dateTime = zipDateTime(now);
+
+        entries.forEach((entry) => {
+          const nameBytes = encoder.encode(entry.name);
+          const data = typeof entry.content === "string" ? encoder.encode(entry.content) : entry.content;
+          const crc = crc32(data);
+          const localHeader = zipHeader(0x04034b50, [
+            20, 0, 0, dateTime.time, dateTime.date, crc, data.length, data.length, nameBytes.length, 0,
+          ], [2, 2, 2, 2, 2, 4, 4, 4, 2, 2]);
+          fileParts.push(localHeader, nameBytes, data);
+
+          const centralHeader = zipHeader(0x02014b50, [
+            20, 20, 0, 0, dateTime.time, dateTime.date, crc, data.length, data.length, nameBytes.length, 0, 0, 0, 0, 0, offset,
+          ], [2, 2, 2, 2, 2, 2, 4, 4, 4, 2, 2, 2, 2, 2, 4, 4]);
+          centralParts.push(centralHeader, nameBytes);
+          offset += localHeader.length + nameBytes.length + data.length;
+        });
+
+        const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+        const endHeader = zipHeader(0x06054b50, [
+          0, 0, entries.length, entries.length, centralSize, offset, 0,
+        ], [2, 2, 2, 2, 4, 4, 2]);
+        return new Blob([...fileParts, ...centralParts, endHeader], { type: mimeType });
+      }
+
+      function zipHeader(signature, values, sizes) {
+        const byteLength = 4 + sizes.reduce((sum, size) => sum + size, 0);
+        const bytes = new Uint8Array(byteLength);
+        const view = new DataView(bytes.buffer);
+        view.setUint32(0, signature, true);
+        let offset = 4;
+        values.forEach((value, index) => {
+          if (sizes[index] === 2) {
+            view.setUint16(offset, value, true);
+          } else {
+            view.setUint32(offset, value >>> 0, true);
+          }
+          offset += sizes[index];
+        });
+        return bytes;
+      }
+
+      function zipDateTime(date) {
+        const time = (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2);
+        const dosYear = Math.max(1980, date.getFullYear()) - 1980;
+        const day = date.getDate();
+        const month = date.getMonth() + 1;
+        return {
+          time,
+          date: (dosYear << 9) | (month << 5) | day,
+        };
+      }
+
+      function crc32(bytes) {
+        let crc = 0xffffffff;
+        for (let index = 0; index < bytes.length; index += 1) {
+          crc ^= bytes[index];
+          for (let bit = 0; bit < 8; bit += 1) {
+            crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+          }
+        }
+        return (crc ^ 0xffffffff) >>> 0;
+      }
+
+      function escapeXml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&apos;");
+      }
+
+      function titleCase(value) {
+        return String(value || "")
+          .toLowerCase()
+          .replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+      }
+
+      function slugifyFileName(value) {
+        const slug = String(value || "ved-canvas-presentation")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(0, 48);
+        return slug || "ved-canvas-presentation";
       }
 
       function normalizePuterReply(response) {
@@ -5176,6 +5591,15 @@
         if (copy.canvasImage?.src && /^(data|blob):/i.test(copy.canvasImage.src)) {
           copy.canvasImage = {
             prompt: copy.canvasImage.prompt || "",
+            expired: true,
+          };
+        }
+        if (copy.pptDeck?.url && /^blob:/i.test(copy.pptDeck.url)) {
+          copy.pptDeck = {
+            title: copy.pptDeck.title || "Ved Canvas presentation",
+            prompt: copy.pptDeck.prompt || "",
+            slideCount: copy.pptDeck.slideCount || 0,
+            slides: copy.pptDeck.slides || [],
             expired: true,
           };
         }
@@ -5405,6 +5829,10 @@
             renderCanvasImage(bubble, message.canvasImage);
           }
 
+          if (message.role === "assistant" && message.pptDeck) {
+            renderPptDeck(bubble, message.pptDeck);
+          }
+
           if (message.role === "assistant" && Array.isArray(message.sources) && message.sources.length) {
             const sources = document.createElement("section");
             sources.className = "sources";
@@ -5493,6 +5921,52 @@
         meta.append(prompt, actions);
         figure.append(image, meta);
         bubble.appendChild(figure);
+      }
+
+      function renderPptDeck(bubble, pptDeck) {
+        const card = document.createElement("section");
+        card.className = "canvas-deck-card";
+        card.setAttribute("aria-label", "Ved Canvas PPT download");
+
+        const title = document.createElement("h3");
+        title.className = "canvas-deck-title";
+        title.textContent = pptDeck.title || "Ved Canvas presentation";
+
+        const meta = document.createElement("p");
+        meta.className = "canvas-deck-meta";
+        meta.textContent = pptDeck.expired
+          ? "This PPT download link expired after reload. Generate the PPT again to download it."
+          : `${pptDeck.slideCount || 0} slides generated from your prompt.`;
+
+        const slideList = document.createElement("ol");
+        slideList.className = "canvas-deck-slide-list";
+        (pptDeck.slides || []).slice(0, 6).forEach((slideTitle) => {
+          const item = document.createElement("li");
+          item.textContent = slideTitle;
+          slideList.appendChild(item);
+        });
+
+        card.append(title, meta);
+        if (slideList.children.length) {
+          card.appendChild(slideList);
+        }
+
+        if (pptDeck.url && !pptDeck.expired) {
+          const actions = document.createElement("div");
+          actions.className = "canvas-image-actions";
+
+          const download = document.createElement("a");
+          download.className = "canvas-image-action";
+          download.href = pptDeck.url;
+          download.download = pptDeck.filename || "ved-canvas-presentation.pptx";
+          download.textContent = "Download PPT";
+          download.setAttribute("aria-label", "Download Ved Canvas PowerPoint presentation");
+
+          actions.appendChild(download);
+          card.appendChild(actions);
+        }
+
+        bubble.appendChild(card);
       }
 
       function renderThinkingLoader(container, labelText = "Ved is thinking") {

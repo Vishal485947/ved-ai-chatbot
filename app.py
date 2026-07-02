@@ -849,6 +849,32 @@ def is_image_generation_request(message):
     )
 
 
+def is_presentation_generation_request(message):
+    normalized = f" {re.sub(r'[^a-z0-9]+', ' ', (message or '').lower())} "
+    presentation_terms = [
+        " ppt ",
+        " pptx ",
+        " powerpoint ",
+        " presentation ",
+        " presentations ",
+        " slide ",
+        " slides ",
+        " slide deck ",
+        " deck ",
+    ]
+    action_triggers = [
+        " create ",
+        " generate ",
+        " make ",
+        " build ",
+        " design ",
+        " prepare ",
+    ]
+    return any(term in normalized for term in presentation_terms) and any(
+        trigger in normalized for trigger in action_triggers
+    )
+
+
 def fetch_url_bytes(url, timeout=8):
     request = Request(
         url,
@@ -1879,11 +1905,11 @@ def chat():
             "memorySaved": saved_memory,
         })
 
-    if is_image_generation_request(user_message):
+    if is_image_generation_request(user_message) or is_presentation_generation_request(user_message):
         return jsonify({
             "reply": (
-                "1. To create images, select Ved Canvas from the mode button beside the microphone.\n"
-                "2. Then describe the image you want and press Generate.\n"
+                "1. To create images or PPT presentations, select Ved Canvas from the mode button beside the microphone.\n"
+                "2. Then describe the image or PPT you want and press Generate.\n"
                 "3. Normal Ved is for chat, files, links, live information, and follow-up questions."
             ),
             "sources": [],
