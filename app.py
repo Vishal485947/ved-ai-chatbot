@@ -58,6 +58,9 @@ opening filler so the user gets the answer quickly.
 When explaining technical, study, current-events, weather, document, image, or
 planning topics, include practical details and next steps. Ask a short follow-up
 question only when needed to continue productively.
+Always answer in the same language as the user's latest message. If the latest
+message mixes languages, match the dominant language or style. Only translate
+or switch languages when the user explicitly asks.
 For follow-up questions, assume the user is referring to the most recent
 relevant message, answer using that context, and only ask for clarification when
 there are multiple likely meanings.
@@ -582,6 +585,51 @@ def compact_text(value, max_chars):
     return text[: max_chars - 3].rstrip() + "..."
 
 
+def prompt_language_instruction(message):
+    text = str(message or "").strip()
+    if not text:
+        return (
+            "Reply in the same language as the user's latest message. "
+            "If the latest message mixes languages, match the dominant language."
+        )
+
+    script_ranges = [
+        ("Hindi/Devanagari", r"[\u0900-\u097F]"),
+        ("Bengali", r"[\u0980-\u09FF]"),
+        ("Gurmukhi/Punjabi", r"[\u0A00-\u0A7F]"),
+        ("Gujarati", r"[\u0A80-\u0AFF]"),
+        ("Tamil", r"[\u0B80-\u0BFF]"),
+        ("Telugu", r"[\u0C00-\u0C7F]"),
+        ("Kannada", r"[\u0C80-\u0CFF]"),
+        ("Malayalam", r"[\u0D00-\u0D7F]"),
+        ("Arabic/Urdu", r"[\u0600-\u06FF]"),
+        ("Chinese/Japanese/Korean", r"[\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7AF]"),
+    ]
+    for language_name, pattern in script_ranges:
+        if re.search(pattern, text):
+            return (
+                f"The user's latest message is written in {language_name}. "
+                "Reply only in that same language/script unless the user explicitly asks for translation or another language."
+            )
+
+    return (
+        "Reply in the same language as the user's latest message. "
+        "If the latest message is English, reply in English. If it is romanized Hindi, Hinglish, or another romanized language, match that style instead of switching to English. "
+        "Only translate or switch languages when the user explicitly asks."
+    )
+
+
+def is_plain_english_message(message):
+    text = str(message or "")
+    if re.search(r"[^\x00-\x7F]", text):
+        return False
+    letter_count = sum(1 for character in text if character.isalpha())
+    if not letter_count:
+        return True
+    ascii_letter_count = sum(1 for character in text if character.isascii() and character.isalpha())
+    return ascii_letter_count == letter_count
+
+
 def format_history_line(item, message_limit):
     if not isinstance(item, dict):
         return ""
@@ -644,6 +692,7 @@ def build_conversation_context(history, user_message, context_summary):
     if recent_lines:
         context.append("Recent conversation:\n" + "\n".join(recent_lines))
 
+    context.append("Language instruction: " + prompt_language_instruction(user_message))
     context.append(f"User: {compact_text(user_message, message_limit)}")
     return context
 
@@ -723,10 +772,11 @@ def user_timezone(timezone_name):
         return "UTC", timezone.utc
 
 
-def build_system_prompt(timezone_name):
+def build_system_prompt(timezone_name, user_message=""):
     timezone_label, tzinfo = user_timezone(timezone_name)
     user_now = datetime.now(tzinfo)
     utc_now = datetime.now(timezone.utc)
+    language_instruction = prompt_language_instruction(user_message)
 
     return f"""
 {SYSTEM_PROMPT.strip()}
@@ -746,6 +796,8 @@ forecast breakdowns, image/PDF analysis, and step-by-step help. Do not prefix
 replies with "Ved:". For short follow-ups such as "explain more", "what about
 this", "why", "summarize it", or "make it shorter", use the previous relevant
 message as context and respond directly.
+
+Language rule: {language_instruction}
 """
 
 
@@ -1553,12 +1605,15 @@ def looks_like_no_live_access_reply(answer):
 
 
 def quick_local_reply(message, user_name):
+    if not is_plain_english_message(message):
+        return ""
+
     normalized = "".join(
         character.lower() if character.isalnum() or character.isspace() else " "
         for character in message
     )
     words = [word for word in normalized.split() if word not in {"ved", "assistant"}]
-    greeting_words = {"hi", "hello", "hey", "hii", "helo", "namaste"}
+    greeting_words = {"hi", "hello", "hey", "hii", "helo"}
 
     if words and len(words) <= 3 and all(word in greeting_words for word in words):
         name = (user_name or "there").split()[0]
@@ -1953,7 +2008,7 @@ def chat():
         for model in model_candidates:
             try:
                 config_options = {
-                    "system_instruction": build_system_prompt(timezone_name),
+                    "system_instruction": build_system_prompt(timezone_name, user_message),
                     "max_output_tokens": env_int("MAX_OUTPUT_TOKENS", 900, 200, 2200),
                 }
                 if should_use_real_time_search(user_message):

@@ -3590,6 +3590,7 @@
       const maxAttachmentTextChars = 60000;
       const backupTextModel = "gpt-5-nano";
       const backupWebSearchModel = "openai/gpt-5.2-chat";
+      const canvasImageModels = ["gpt-image-1-mini", "gpt-image-1", "gpt-image-2"];
       const responseTokenBudget = 900;
       const longThinkingDelayMs = 10000;
       const wordRevealDelayMs = 24;
@@ -4829,6 +4830,29 @@
         return normalized.includes(currentYear) || searchTriggers.some((trigger) => normalized.includes(trigger));
       }
 
+      function userLanguageInstruction(message) {
+        const text = String(message || "").trim();
+        const scriptProfiles = [
+          { name: "Hindi/Devanagari", pattern: /[\u0900-\u097F]/ },
+          { name: "Bengali", pattern: /[\u0980-\u09FF]/ },
+          { name: "Gurmukhi/Punjabi", pattern: /[\u0A00-\u0A7F]/ },
+          { name: "Gujarati", pattern: /[\u0A80-\u0AFF]/ },
+          { name: "Tamil", pattern: /[\u0B80-\u0BFF]/ },
+          { name: "Telugu", pattern: /[\u0C00-\u0C7F]/ },
+          { name: "Kannada", pattern: /[\u0C80-\u0CFF]/ },
+          { name: "Malayalam", pattern: /[\u0D00-\u0D7F]/ },
+          { name: "Arabic/Urdu", pattern: /[\u0600-\u06FF]/ },
+          { name: "Chinese/Japanese/Korean", pattern: /[\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7AF]/ },
+        ];
+
+        const matchedProfile = scriptProfiles.find((profile) => profile.pattern.test(text));
+        if (matchedProfile) {
+          return `The user's latest message is written in ${matchedProfile.name}. Reply only in that same language/script unless the user explicitly asks for translation or another language.`;
+        }
+
+        return "Reply in the same language as the user's latest message. If it is English, reply in English. If it is romanized Hindi, Hinglish, or another romanized language, match that style instead of switching to English. Only translate or switch languages when the user explicitly asks.";
+      }
+
       function isImageGenerationRequest(message) {
         const normalized = ` ${String(message || "")
           .toLowerCase()
@@ -4887,7 +4911,25 @@
           throw new Error("1. Ved Canvas is still loading the image generator.\n2. Refresh the page, wait a few seconds, then try again.");
         }
 
-        const response = await window.puter.ai.txt2img(prompt);
+        let response = null;
+        let lastError = null;
+        for (const model of canvasImageModels) {
+          try {
+            response = await window.puter.ai.txt2img(prompt, {
+              model,
+              quality: "low",
+            });
+            break;
+          } catch (error) {
+            lastError = error;
+          }
+        }
+
+        if (!response) {
+          const message = cleanAssistantText(lastError?.message || lastError) || "The image generator could not start.";
+          throw new Error(`1. Ved Canvas could not generate the image right now.\n2. ${message}\n3. Try again in a minute or use a more specific prompt.`);
+        }
+
         const candidates = Array.isArray(response) ? response : [response];
         let src = "";
 
@@ -4985,6 +5027,7 @@
               `You are Ved, a friendly and professional AI assistant. Give complete, well-structured answers with practical details, examples, steps, or caveats when useful. Use numbered points like 1., 2., 3., 4. wherever they fit naturally, especially for explanations, summaries, comparisons, image analysis, plans, and instructions. Keep only greetings and very small questions brief. ` +
               `For follow-up questions, use the recent conversation as context and answer directly instead of asking the user to repeat details. Avoid unnecessary opening filler so replies arrive and read faster. ` +
               `If the user asks who created you, answer exactly: My creator is Vishal Raj,a student of class X B  SPSTDSC. ` +
+              `Language rule: ${userLanguageInstruction(userText)} ` +
               `Current user date/time: ${localNow} (${userTimezone}). ` +
               `Do not mention backup systems, rate limits, Gemini, or Puter. ` +
               (useWebSearch
