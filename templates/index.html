@@ -4872,6 +4872,12 @@
           "weather",
           "temperature",
           "forecast",
+          "mausam",
+          "barish",
+          "baarish",
+          "barsat",
+          "garmi",
+          "thand",
           "score",
           "match",
           "fixture",
@@ -4921,6 +4927,15 @@
         const normalized = ` ${String(message || "")
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, " ")} `;
+        const compact = normalized.trim();
+        const visualActionStarts = ["draw ", "paint ", "sketch ", "illustrate "];
+        if (
+          visualActionStarts.some((prefix) => compact.startsWith(prefix)) &&
+          !compact.startsWith("draw conclusion") &&
+          !compact.startsWith("draw a conclusion")
+        ) {
+          return true;
+        }
         const actionTriggers = [
           " create ",
           " generate ",

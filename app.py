@@ -818,6 +818,11 @@ def asks_about_creator(message):
 
 def is_image_generation_request(message):
     normalized = f" {re.sub(r'[^a-z0-9]+', ' ', (message or '').lower())} "
+    compact = normalized.strip()
+    visual_action_starts = ("draw ", "paint ", "sketch ", "illustrate ")
+    if compact.startswith(visual_action_starts) and not compact.startswith(("draw conclusion", "draw a conclusion")):
+        return True
+
     action_triggers = [
         " create ",
         " generate ",
@@ -1104,6 +1109,14 @@ def is_weather_query(message):
         " cloudy ",
         " sunny ",
         " thunderstorm ",
+        " mausam ",
+        " barish ",
+        " baarish ",
+        " barsat ",
+        " varsha ",
+        " garmi ",
+        " thand ",
+        " hawa ",
     ]
     return any(term in normalized for term in weather_terms)
 
@@ -1127,7 +1140,11 @@ WEATHER_LOCATION_FILLER_WORDS = {
     "in",
     "is",
     "it",
+    "kal",
+    "kya",
     "me",
+    "mein",
+    "mausam",
     "near",
     "now",
     "of",
@@ -1136,6 +1153,9 @@ WEATHER_LOCATION_FILLER_WORDS = {
     "probability",
     "rain",
     "raining",
+    "barish",
+    "baarish",
+    "barsat",
     "right",
     "risk",
     "show",
@@ -1145,6 +1165,10 @@ WEATHER_LOCATION_FILLER_WORDS = {
     "there",
     "today",
     "tomorrow",
+    "aaj",
+    "hogi",
+    "hoga",
+    "hai",
     "weather",
     "will",
     "wind",
@@ -1178,7 +1202,7 @@ def clean_weather_location_text(value):
 
 def extract_weather_location(message):
     preposition_matches = list(re.finditer(
-        r"\b(?:in|for|at|near)\s+([^?.!;]+)",
+        r"\b(?:in|for|at|near|me|mein)\s+([^?.!;]+)",
         str(message or ""),
         flags=re.IGNORECASE,
     ))
@@ -2152,11 +2176,8 @@ def chat():
                     "memorySaved": saved_memory,
                 })
             return jsonify({
-                "reply": "Ved reached the live AI quota right now. Please try again in a minute.",
-                "sources": [],
-                "searchHtml": "",
-                "memorySaved": saved_memory,
-            })
+                "error": "Gemini quota is temporarily unavailable. Ved will try another AI route when possible."
+            }), 503
 
         if is_gemini_unavailable_error(error_text):
             if live_news_articles:
@@ -2175,11 +2196,8 @@ def chat():
                 })
 
             return jsonify({
-                "reply": "Live AI is temporarily overloaded. Please try again in a minute.",
-                "sources": [],
-                "searchHtml": "",
-                "memorySaved": saved_memory,
-            })
+                "error": "Gemini is temporarily overloaded. Ved will try another AI route when possible."
+            }), 503
 
         if "not_found" in error_text or "not found" in error_text or "404" in error_text:
             return jsonify({
