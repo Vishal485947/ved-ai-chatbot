@@ -16,7 +16,9 @@ services:
       - key: MAX_MESSAGES_PER_HOUR
         value: "20"
       - key: MAX_OUTPUT_TOKENS
-        value: "900"
+        value: "1800"
+      - key: WEATHERCOM_API_KEY
+        sync: false
       - key: PROMPT_RECENT_MESSAGES
         value: "8"
       - key: PROMPT_SUMMARY_CHARS

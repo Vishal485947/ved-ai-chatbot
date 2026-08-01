@@ -56,8 +56,10 @@ for procedures, bullets for quick lists, tables for comparisons or structured
 data, and simple text charts only when they make the answer easier to
 understand. Avoid raw Markdown decoration such as excessive double-asterisk
 bold markers.
-Include enough context, examples, steps, or caveats to be genuinely helpful,
-but avoid unnecessary opening filler so the user gets the answer quickly.
+Prefer concise, direct answers unless the user asks for detail or the topic
+needs careful explanation. Include context, examples, steps, or caveats when
+they are useful, but avoid unnecessary opening filler so the user gets the
+answer quickly.
 When explaining technical, study, current-events, weather, document, image, or
 planning topics, include practical details and next steps. Ask a short follow-up
 question only when needed to continue productively.
@@ -531,12 +533,29 @@ def needs_real_time_search(message):
         "wind",
         "cloudy",
         "sunny",
+        "showers",
+        "drizzle",
         "mausam",
         "barish",
         "baarish",
         "barsat",
+        "varsha",
         "garmi",
         "thand",
+        "thandi",
+        "sardi",
+        "hawa",
+        "dhoop",
+        "dhup",
+        "badal",
+        "badli",
+        "bijli",
+        "toofan",
+        "tufan",
+        "aandhi",
+        "boondabandi",
+        "tapman",
+        "taapman",
         "score",
         "match",
         "fixture",
@@ -780,6 +799,37 @@ def extract_grounding(response):
                 break
 
     return {"sources": sources, "searchHtml": search_html}
+
+
+def response_finish_reason(response):
+    for candidate in getattr(response, "candidates", []) or []:
+        finish_reason = (
+            getattr(candidate, "finish_reason", None)
+            or getattr(candidate, "finishReason", None)
+        )
+        if finish_reason:
+            return str(finish_reason)
+    return ""
+
+
+def looks_like_incomplete_answer(answer):
+    text = str(answer or "").strip()
+    if len(text) < 160:
+        return False
+    last_line = next((line.strip() for line in reversed(text.splitlines()) if line.strip()), text)
+    if re.search(r"[.!?)]$", last_line):
+        return False
+    if re.search(r"^(sources?|references?):?$", last_line, flags=re.IGNORECASE):
+        return True
+    if re.search(r"[:;,]$", last_line):
+        return True
+    if re.search(
+        r"\b(a|an|the|to|for|with|and|or|of|in|on|at|by|from|as|that|which|your|their|this|these|those)$",
+        last_line,
+        flags=re.IGNORECASE,
+    ):
+        return True
+    return len(text) > 1200 and not re.search(r"[.!?]$", text)
 
 
 def merge_sources(*source_lists):
@@ -1133,7 +1183,26 @@ def clean_unit(value, fallback):
 
 
 def is_weather_query(message):
-    normalized = " " + re.sub(r"[^a-z0-9]+", " ", message.lower()) + " "
+    original = str(message or "").lower()
+    native_weather_terms = [
+        "मौसम",
+        "बारिश",
+        "बरसात",
+        "वर्षा",
+        "तापमान",
+        "गर्मी",
+        "ठंड",
+        "सर्दी",
+        "हवा",
+        "धूप",
+        "बादल",
+        "तूफान",
+        "आंधी",
+    ]
+    if any(term in original for term in native_weather_terms):
+        return True
+
+    normalized = " " + re.sub(r"[^a-z0-9]+", " ", original) + " "
     weather_terms = [
         " weather ",
         " forecast ",
@@ -1145,6 +1214,8 @@ def is_weather_query(message):
         " cloudy ",
         " sunny ",
         " thunderstorm ",
+        " showers ",
+        " drizzle ",
         " mausam ",
         " barish ",
         " baarish ",
@@ -1152,9 +1223,75 @@ def is_weather_query(message):
         " varsha ",
         " garmi ",
         " thand ",
+        " thandi ",
+        " sardi ",
         " hawa ",
+        " dhoop ",
+        " dhup ",
+        " badal ",
+        " badli ",
+        " bijli ",
+        " toofan ",
+        " tufan ",
+        " aandhi ",
+        " aandhi ",
+        " boondabandi ",
+        " tapman ",
+        " taapman ",
     ]
     return any(term in normalized for term in weather_terms)
+
+
+def is_user_location_weather_query(message):
+    normalized = " " + re.sub(r"[^a-z0-9]+", " ", str(message or "").lower()) + " "
+    location_terms = [
+        " my location ",
+        " current location ",
+        " live location ",
+        " where i am ",
+        " here ",
+        " near me ",
+        " mere yahan ",
+        " mere yahaan ",
+        " meri location ",
+        " mera location ",
+        " yahan ",
+        " yahaan ",
+        " idhar ",
+    ]
+    if not is_weather_query(message):
+        return False
+    if any(term in normalized for term in location_terms):
+        return True
+    try:
+        return not clean_weather_location_text(message)
+    except NameError:
+        return False
+
+
+def validated_browser_location(value):
+    if not isinstance(value, dict):
+        return None
+    try:
+        latitude = float(value.get("latitude"))
+        longitude = float(value.get("longitude"))
+    except (TypeError, ValueError):
+        return None
+    if not -90 <= latitude <= 90 or not -180 <= longitude <= 180:
+        return None
+
+    accuracy = None
+    try:
+        if value.get("accuracy") is not None:
+            accuracy = max(0, round(float(value.get("accuracy"))))
+    except (TypeError, ValueError):
+        accuracy = None
+
+    return {
+        "latitude": latitude,
+        "longitude": longitude,
+        "accuracy": accuracy,
+    }
 
 
 WEATHER_LOCATION_FILLER_WORDS = {
@@ -1192,9 +1329,33 @@ WEATHER_LOCATION_FILLER_WORDS = {
     "barish",
     "baarish",
     "barsat",
+    "batao",
+    "btao",
+    "batana",
+    "badal",
+    "badli",
+    "bijli",
+    "boondabandi",
+    "dhoop",
+    "dhup",
+    "idhar",
+    "ka",
+    "ke",
+    "ki",
+    "kaisa",
+    "kaisi",
+    "kitna",
+    "kitni",
+    "location",
+    "mera",
+    "mere",
+    "meri",
     "right",
     "risk",
+    "sardi",
     "show",
+    "tapman",
+    "taapman",
     "temperature",
     "tell",
     "the",
@@ -1202,12 +1363,21 @@ WEATHER_LOCATION_FILLER_WORDS = {
     "today",
     "tomorrow",
     "aaj",
+    "abhi",
     "hogi",
     "hoga",
+    "honge",
+    "padegi",
+    "padega",
+    "padengi",
+    "padenge",
     "hai",
+    "hain",
     "weather",
     "will",
     "wind",
+    "yahan",
+    "yahaan",
 }
 
 WEATHER_REGION_ALIASES = {
@@ -1226,7 +1396,7 @@ def clean_weather_location_text(value):
         flags=re.IGNORECASE,
     )
     text = re.sub(
-        r"\b(weather|forecast|temperature|rain|raining|humidity|wind|cloudy|sunny|thunderstorm|showers?|precipitation|precip|chance|chances|probability|possibility|risk)\b",
+        r"\b(weather|forecast|temperature|rain|raining|humidity|wind|cloudy|sunny|thunderstorm|showers?|drizzle|precipitation|precip|chance|chances|probability|possibility|risk|mausam|barish|baarish|barsat|varsha|garmi|thand|thandi|sardi|hawa|dhoop|dhup|badal|badli|bijli|toofan|tufan|aandhi|boondabandi|tapman|taapman)\b",
         " ",
         text,
         flags=re.IGNORECASE,
@@ -1238,7 +1408,7 @@ def clean_weather_location_text(value):
 
 def extract_weather_location(message):
     preposition_matches = list(re.finditer(
-        r"\b(?:in|for|at|near|me|mein)\s+([^?.!;]+)",
+        r"\b(?:in|for|at|near|me|mein|mai|par|ke liye)\s+([^?.!;]+)",
         str(message or ""),
         flags=re.IGNORECASE,
     ))
@@ -1328,34 +1498,158 @@ def geocode_weather_location(location_query):
     return None, last_url, location_query
 
 
-def build_weather_forecast_reply(message):
+def weathercom_url(latitude, longitude):
+    return f"https://weather.com/weather/today/l/{latitude:.4f},{longitude:.4f}"
+
+
+def first_present(*values):
+    for value in values:
+        if value is not None and value != "":
+            return value
+    return None
+
+
+def weathercom_daypart_value(daypart, key, index=0):
+    values = daypart.get(key) if isinstance(daypart, dict) else None
+    if isinstance(values, list) and index < len(values):
+        return values[index]
+    return None
+
+
+def build_weathercom_forecast_reply(latitude, longitude, label="your location", accuracy=None):
+    api_key = os.getenv("WEATHERCOM_API_KEY", "").strip()
+    if not api_key:
+        return None
+
+    common = {
+        "geocode": f"{latitude},{longitude}",
+        "format": "json",
+        "units": "m",
+        "language": "en-US",
+        "apiKey": api_key,
+    }
+    current_url = "https://api.weather.com/v3/wx/observations/current?" + urlencode(common)
+    daily_url = "https://api.weather.com/v3/wx/forecast/daily/5day?" + urlencode(common)
+
+    current = fetch_json(current_url)
+    daily = fetch_json(daily_url)
+    daypart = (daily.get("daypart") or [{}])[0]
+
+    obs_label = first_present(current.get("obsName"), label)
+    phrase = first_present(current.get("wxPhraseLong"), current.get("phrase_32char"), "conditions unavailable")
+    temperature = first_present(current.get("temperature"), current.get("temperatureMax24Hour"))
+    feels_like = first_present(current.get("temperatureFeelsLike"), current.get("temperatureHeatIndex"))
+    humidity = current.get("relativeHumidity")
+    wind_speed = current.get("windSpeed")
+    wind_direction = current.get("windDirectionCardinal")
+    pressure = first_present(current.get("pressureAltimeter"), current.get("pressureMeanSeaLevel"))
+    visibility = current.get("visibility")
+    uv_index = current.get("uvIndex")
+    precip_1h = first_present(current.get("precip1Hour"), current.get("precip24Hour"))
+
+    lines = [
+        f"Current weather for {obs_label}: {format_number(temperature, 1)} degrees C and {str(phrase).lower()}.",
+        f"Feels like {format_number(feels_like, 1)} degrees C, humidity {format_number(humidity)}%, wind {format_number(wind_speed)} km/h{f' from {wind_direction}' if wind_direction else ''}.",
+    ]
+    detail_parts = []
+    if precip_1h is not None:
+        detail_parts.append(f"precipitation {format_number(precip_1h, 1)} mm")
+    if pressure is not None:
+        detail_parts.append(f"pressure {format_number(pressure, 1)} mb")
+    if visibility is not None:
+        detail_parts.append(f"visibility {format_number(visibility, 1)} km")
+    if uv_index is not None:
+        detail_parts.append(f"UV index {format_number(uv_index)}")
+    if detail_parts:
+        lines.append("Additional details: " + "; ".join(detail_parts) + ".")
+
+    dates = daily.get("validTimeLocal") or daily.get("dayOfWeek") or []
+    max_temps = daily.get("calendarDayTemperatureMax") or daily.get("temperatureMax") or []
+    min_temps = daily.get("calendarDayTemperatureMin") or daily.get("temperatureMin") or []
+    narratives = daily.get("narrative") or []
+    forecast_lines = []
+    for index in range(min(5, len(dates), len(max_temps), len(min_temps))):
+        day_text = dates[index]
+        try:
+            day_label = datetime.fromisoformat(str(day_text).replace("Z", "+00:00")).strftime("%a, %b %d")
+        except ValueError:
+            day_label = str(day_text)
+        precip_chance = first_present(
+            weathercom_daypart_value(daypart, "precipChance", index * 2),
+            weathercom_daypart_value(daypart, "precipChance", index * 2 + 1),
+        )
+        narrative = narratives[index] if index < len(narratives) else ""
+        forecast_lines.append(
+            f"{day_label}: {format_number(max_temps[index], 1)}/{format_number(min_temps[index], 1)} degrees C"
+            + (f", rain chance {format_number(precip_chance)}%" if precip_chance is not None else "")
+            + (f". {narrative}" if narrative else ".")
+        )
+
+    if forecast_lines:
+        lines.append("5-day forecast:\n" + "\n".join(forecast_lines))
+    if accuracy is not None:
+        lines.append(f"Location note: browser location accuracy was about {accuracy} meters.")
+
+    return {
+        "reply": "\n".join(lines),
+        "sources": [
+            {"title": "Weather.com Current Conditions", "uri": weathercom_url(latitude, longitude)},
+            {"title": "Weather.com 5-Day Forecast", "uri": weathercom_url(latitude, longitude)},
+        ],
+    }
+
+
+def build_weather_forecast_reply(message, browser_location=None):
     if not is_weather_query(message):
         return None
 
+    browser_location = validated_browser_location(browser_location)
     location_query = extract_weather_location(message)
-    if not location_query:
+    uses_browser_location = bool(browser_location and is_user_location_weather_query(message))
+
+    if uses_browser_location:
+        latitude = browser_location["latitude"]
+        longitude = browser_location["longitude"]
+        label = "your current location"
+        geocode_url = ""
+        matched_query = ""
+    elif is_user_location_weather_query(message):
+        return {
+            "reply": "Please allow location permission in your browser, or type your city name so I can check the weather.",
+            "sources": [],
+        }
+    elif not location_query:
         return {
             "reply": "Which city or place should I check the weather for?",
             "sources": [],
         }
+    else:
+        location, geocode_url, matched_query = geocode_weather_location(location_query)
+        if not location:
+            return {
+                "reply": f"I could not find a weather location for {location_query}. Try a nearby city name.",
+                "sources": [{"title": "Open-Meteo Geocoding", "uri": geocode_url}],
+            }
 
-    location, geocode_url, matched_query = geocode_weather_location(location_query)
-    if not location:
-        return {
-            "reply": f"I could not find a weather location for {location_query}. Try a nearby city name.",
-            "sources": [{"title": "Open-Meteo Geocoding", "uri": geocode_url}],
-        }
+        latitude = location.get("latitude")
+        longitude = location.get("longitude")
+        label = ", ".join(
+            part for part in [
+                location.get("name"),
+                location.get("admin1"),
+                location.get("country"),
+            ]
+            if part
+        )
 
-    latitude = location.get("latitude")
-    longitude = location.get("longitude")
-    label = ", ".join(
-        part for part in [
-            location.get("name"),
-            location.get("admin1"),
-            location.get("country"),
-        ]
-        if part
+    weathercom_result = build_weathercom_forecast_reply(
+        float(latitude),
+        float(longitude),
+        label=label,
+        accuracy=browser_location.get("accuracy") if browser_location else None,
     )
+    if weathercom_result:
+        return weathercom_result
 
     forecast_params = urlencode({
         "latitude": latitude,
@@ -1375,8 +1669,8 @@ def build_weather_forecast_reply(message):
     wind_unit = clean_unit(current_units.get("wind_speed_10m"), "km/h")
     current_description = weather_code_description(current.get("weather_code"))
     lines = [
-        f"1. Current weather for {label}: {format_number(current.get('temperature_2m'), 1)} degrees {temp_unit} and {current_description}.",
-        f"2. Comfort details: feels like {format_number(current.get('apparent_temperature'), 1)} degrees {temp_unit}; humidity {format_number(current.get('relative_humidity_2m'))}%; wind {format_number(current.get('wind_speed_10m'))} {wind_unit}.",
+        f"Current weather for {label}: {format_number(current.get('temperature_2m'), 1)} degrees {temp_unit} and {current_description}.",
+        f"It feels like {format_number(current.get('apparent_temperature'), 1)} degrees {temp_unit}, with humidity at {format_number(current.get('relative_humidity_2m'))}% and wind around {format_number(current.get('wind_speed_10m'))} {wind_unit}.",
     ]
 
     times = daily.get("time") or []
@@ -1396,14 +1690,16 @@ def build_weather_forecast_reply(message):
         weather_code = weather_codes[index] if index < len(weather_codes) else None
         rain_chance = rain_chances[index] if index < len(rain_chances) else None
         forecast_lines.append(
-            f"{index + 1}. {day_label}: {format_number(max_temp, 1)}/{format_number(min_temp, 1)} degrees, {weather_code_description(weather_code)}, rain chance {format_number(rain_chance)}%"
+            f"- {day_label}: {format_number(max_temp, 1)}/{format_number(min_temp, 1)} degrees, {weather_code_description(weather_code)}, rain chance {format_number(rain_chance)}%"
         )
 
     if forecast_lines:
-        lines.append("3. 5-day forecast:\n" + "\n".join(forecast_lines))
+        lines.append("5-day forecast:\n" + "\n".join(forecast_lines))
 
-    if matched_query.lower() != location_query.lower():
-        lines.append(f"4. Location note: I searched for {matched_query} because {location_query} was not an exact weather-location match.")
+    if browser_location:
+        lines.append(f"Location note: browser location accuracy was about {browser_location.get('accuracy') or 'unknown'} meters. Add WEATHERCOM_API_KEY on Render to use Weather.com as the primary provider.")
+    elif matched_query.lower() != location_query.lower():
+        lines.append(f"Location note: I searched for {matched_query} because {location_query} was not an exact weather-location match.")
 
     return {
         "reply": "\n".join(lines),
@@ -1964,6 +2260,7 @@ def chat():
     context_summary = data.get("contextSummary") or ""
     timezone_name = data.get("timezone") or "UTC"
     attachments = data.get("attachments") or []
+    browser_location = validated_browser_location(data.get("location"))
     project_id = normalize_project_id(data.get("projectId"))
     if not isinstance(history, list):
         history = []
@@ -2009,7 +2306,7 @@ def chat():
 
     if is_weather_query(user_message) and not attachments:
         try:
-            weather_result = build_weather_forecast_reply(user_message)
+            weather_result = build_weather_forecast_reply(user_message, browser_location)
         except Exception:
             weather_result = {
                 "reply": "I could not fetch the live weather forecast right now. Please try again in a minute.",
@@ -2116,7 +2413,7 @@ def chat():
             try:
                 config_options = {
                     "system_instruction": build_system_prompt(timezone_name, user_message),
-                    "max_output_tokens": env_int("MAX_OUTPUT_TOKENS", 900, 200, 2200),
+                    "max_output_tokens": env_int("MAX_OUTPUT_TOKENS", 1800, 400, 4096),
                 }
                 if should_use_real_time_search(user_message):
                     config_options["tools"] = [
@@ -2170,6 +2467,7 @@ def chat():
             }), 404
 
         grounding = extract_grounding(response)
+        finish_reason = response_finish_reason(response)
         answer = (response.text or "").strip()
         if not answer:
             answer = "I could not generate a reply for that. Please try asking another way."
@@ -2183,11 +2481,17 @@ def chat():
                 answer = format_live_source_fallback(live_info_query, live_info_articles)
             elif not grounding.get("sources"):
                 answer = "I could not fetch reliable live sources for that topic right now. Please try again in a minute."
+        incomplete = (
+            "max" in finish_reason.lower()
+            or "token" in finish_reason.lower()
+            or looks_like_incomplete_answer(answer)
+        )
         return jsonify({
             "reply": answer,
             "sources": merge_sources(grounding.get("sources"), live_news_sources, live_info_sources),
             "searchHtml": grounding.get("searchHtml", ""),
             "memorySaved": saved_memory,
+            "incomplete": incomplete,
         })
     except Exception as exc:
         error_text = str(exc).lower()

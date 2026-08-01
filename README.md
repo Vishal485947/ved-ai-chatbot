@@ -43,7 +43,8 @@ GEMINI_MODEL=gemini-2.5-flash-lite
 ENABLE_REAL_TIME_SEARCH=true
 SMART_REAL_TIME_SEARCH=true
 MAX_MESSAGES_PER_HOUR=20
-MAX_OUTPUT_TOKENS=700
+MAX_OUTPUT_TOKENS=1800
+WEATHERCOM_API_KEY=your_weather_com_api_key_here
 PROMPT_RECENT_MESSAGES=8
 PROMPT_SUMMARY_CHARS=1600
 PROMPT_MESSAGE_CHARS=700
@@ -79,6 +80,11 @@ Ved also keeps real-time search smart. With `ENABLE_REAL_TIME_SEARCH=true` and
 that look current, live, or time-sensitive. Shorter replies are encouraged by the
 system prompt and capped with `MAX_OUTPUT_TOKENS`.
 
+For local weather, Ved asks the browser for location permission when the user asks
+for weather at their current location or uses a generic Hinglish prompt such as
+`aaj ka mausam kya hai`. Set `WEATHERCOM_API_KEY` to use Weather.com as the primary
+weather provider. If it is not set, Ved falls back to Open-Meteo.
+
 If Gemini returns a quota or rate-limit error, the browser tries Puter.js as a
 backup AI. For live or current questions, the fallback uses Puter web search instead
 of showing a "try again later" message. Gemini remains the primary model.
@@ -111,7 +117,8 @@ GEMINI_MODEL=gemini-2.5-flash-lite
 ENABLE_REAL_TIME_SEARCH=true
 SMART_REAL_TIME_SEARCH=true
 MAX_MESSAGES_PER_HOUR=20
-MAX_OUTPUT_TOKENS=700
+MAX_OUTPUT_TOKENS=1800
+WEATHERCOM_API_KEY=your_weather_com_api_key_here
 PROMPT_RECENT_MESSAGES=8
 PROMPT_SUMMARY_CHARS=1600
 PROMPT_MESSAGE_CHARS=700
@@ -124,6 +131,10 @@ GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
 for current information and source links. `SMART_REAL_TIME_SEARCH=true` saves quota
 by using search only for live or time-sensitive questions. Search grounding can
 affect API usage or billing depending on your Gemini plan.
+
+`WEATHERCOM_API_KEY` lets Ved use Weather.com for current conditions and forecasts.
+Without it, location permission still works, but weather data falls back to
+Open-Meteo.
 
 6. Deploy the service.
 

@@ -3665,7 +3665,7 @@
       const backupTextModel = "gpt-5-nano";
       const backupWebSearchModel = "openai/gpt-5.2-chat";
       const canvasImageModels = ["gpt-image-1-mini", "gpt-image-1", "gpt-image-2"];
-      const responseTokenBudget = 900;
+      const responseTokenBudget = 1800;
       const longThinkingDelayMs = 10000;
       const wordRevealDelayMs = 24;
       const mobileWorkspaceQuery = window.matchMedia("(max-width: 700px)");
@@ -3972,6 +3972,16 @@
               ];
         const attachmentSummaries = attachmentsForRequest.map(attachmentSummary);
         const userContent = text || "Please review the attachment.";
+        let browserLocation = null;
+        if (modeForRequest !== "canvas" && isLocationWeatherRequest(userContent)) {
+          setVoiceStatus("Ved needs your location permission for local weather.");
+          try {
+            browserLocation = await getBrowserLocation();
+            setVoiceStatus("Location received. Checking weather...");
+          } catch (error) {
+            setVoiceStatus(error?.message || "Location permission was not granted.");
+          }
+        }
         pendingAttachments = [];
         renderPendingAttachments();
 
@@ -4115,6 +4125,7 @@
               contextSummary,
               timezone: userTimezone,
               projectId: activeProjectId,
+              location: browserLocation,
               attachments: attachmentsForRequest,
             }),
           });
@@ -4134,7 +4145,7 @@
               loading.content = "Ved is checking another route...";
               renderMessages();
 
-              const backupReply = await getBackupReply(userContent, priorMessages);
+              const backupReply = completeReplyIfCutOff(await getBackupReply(userContent, priorMessages));
               conversation.messages = conversation.messages.filter((message) => message !== loading);
               conversation.messages.push({
                 role: "assistant",
@@ -4152,7 +4163,7 @@
             throw new Error(data.error || "Ved could not reply right now.");
           }
 
-          const reply = cleanAssistantText(data?.reply);
+          const reply = completeReplyIfCutOff(data?.reply, Boolean(data?.incomplete));
           if (!reply) {
             throw new Error(cleanAssistantText(data?.error) || "Ved received an empty reply. Please try again.");
           }
@@ -4178,7 +4189,7 @@
           const errorText = cleanAssistantText(error?.message) || "Ved could not reply right now. Please try again.";
           if (modeForRequest !== "canvas" && !attachmentsForRequest.length && shouldUseBackupAi(0, errorText)) {
             try {
-              const backupReply = await getBackupReply(userContent, priorMessages);
+              const backupReply = completeReplyIfCutOff(await getBackupReply(userContent, priorMessages));
               conversation.messages = conversation.messages.filter((message) => message !== loading);
               conversation.messages.push({ role: "assistant", content: backupReply, animate: true });
               if (isVoiceMessage) {
@@ -4889,8 +4900,24 @@
       }
 
       function needsBackupWebSearch(message) {
-        const normalized = ` ${String(message || "").toLowerCase()} `;
+        const original = String(message || "").toLowerCase();
+        const normalized = ` ${original} `;
         const currentYear = String(new Date().getFullYear());
+        const nativeSearchTriggers = [
+          "मौसम",
+          "बारिश",
+          "बरसात",
+          "वर्षा",
+          "तापमान",
+          "गर्मी",
+          "ठंड",
+          "सर्दी",
+          "हवा",
+          "धूप",
+          "बादल",
+          "तूफान",
+          "आंधी",
+        ];
         const searchTriggers = [
           "latest",
           "current",
@@ -4920,12 +4947,29 @@
           "wind",
           "cloudy",
           "sunny",
+          "showers",
+          "drizzle",
           "mausam",
           "barish",
           "baarish",
           "barsat",
+          "varsha",
           "garmi",
           "thand",
+          "thandi",
+          "sardi",
+          "hawa",
+          "dhoop",
+          "dhup",
+          "badal",
+          "badli",
+          "bijli",
+          "toofan",
+          "tufan",
+          "aandhi",
+          "boondabandi",
+          "tapman",
+          "taapman",
           "score",
           "match",
           "fixture",
@@ -4965,7 +5009,145 @@
           "look up",
         ];
 
-        return normalized.includes(currentYear) || searchTriggers.some((trigger) => normalized.includes(trigger));
+        return normalized.includes(currentYear) ||
+          searchTriggers.some((trigger) => normalized.includes(trigger)) ||
+          nativeSearchTriggers.some((trigger) => original.includes(trigger));
+      }
+
+      function isLocationWeatherRequest(message) {
+        const original = String(message || "").toLowerCase();
+        const normalized = ` ${String(message || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, " ")} `;
+        const nativeWeatherTerms = [
+          "मौसम",
+          "बारिश",
+          "बरसात",
+          "वर्षा",
+          "तापमान",
+          "गर्मी",
+          "ठंड",
+          "सर्दी",
+          "हवा",
+          "धूप",
+          "बादल",
+          "तूफान",
+          "आंधी",
+        ];
+        const weatherTerms = [
+          " weather ",
+          " forecast ",
+          " temperature ",
+          " rain ",
+          " raining ",
+          " humidity ",
+          " wind ",
+          " cloudy ",
+          " sunny ",
+          " shower ",
+          " showers ",
+          " drizzle ",
+          " mausam ",
+          " barish ",
+          " baarish ",
+          " barsat ",
+          " varsha ",
+          " garmi ",
+          " thand ",
+          " thandi ",
+          " sardi ",
+          " hawa ",
+          " dhoop ",
+          " dhup ",
+          " badal ",
+          " badli ",
+          " bijli ",
+          " toofan ",
+          " tufan ",
+          " aandhi ",
+          " boondabandi ",
+          " tapman ",
+          " taapman ",
+        ];
+        const locationTerms = [
+          " my location ",
+          " current location ",
+          " live location ",
+          " where i am ",
+          " here ",
+          " near me ",
+          " mere yahan ",
+          " mere yahaan ",
+          " meri location ",
+          " mera location ",
+          " yahan ",
+          " yahaan ",
+          " idhar ",
+        ];
+        if (!weatherTerms.some((term) => normalized.includes(term)) &&
+          !nativeWeatherTerms.some((term) => original.includes(term))) {
+          return false;
+        }
+        if (locationTerms.some((term) => normalized.includes(term))) {
+          return true;
+        }
+
+        return !extractTypedWeatherLocation(message);
+      }
+
+      function extractTypedWeatherLocation(message) {
+        let cleaned = ` ${String(message || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9,\s-]+/g, " ")} `;
+        cleaned = cleaned.replace(
+          /\b(weather|forecast|temperature|rain|raining|humidity|wind|cloudy|sunny|thunderstorm|showers?|drizzle|precipitation|precip|chance|chances|probability|possibility|risk|mausam|barish|baarish|barsat|varsha|garmi|thand|thandi|sardi|hawa|dhoop|dhup|badal|badli|bijli|toofan|tufan|aandhi|boondabandi|tapman|taapman)\b/g,
+          " "
+        );
+        const filler = new Set([
+          "a", "an", "any", "at", "be", "can", "check", "current", "currently", "for", "give", "happen",
+          "in", "is", "it", "me", "mein", "mai", "near", "now", "of", "on", "please", "right", "show",
+          "tell", "the", "there", "today", "tomorrow", "will", "aaj", "abhi", "kal", "parso", "kya",
+          "ka", "ke", "ki", "kaisa", "kaisi", "kitna", "kitni", "hai", "hain", "hoga", "hogi", "honge",
+          "padega", "padegi", "padenge", "padengi", "batao", "btao", "batana", "mere", "mera", "meri",
+          "yahan", "yahaan", "idhar", "location"
+        ]);
+        return cleaned
+          .split(/[\s,]+/)
+          .filter((word) => word && !filler.has(word))
+          .join(" ")
+          .trim();
+      }
+
+      function getBrowserLocation() {
+        return new Promise((resolve, reject) => {
+          if (!navigator.geolocation) {
+            reject(new Error("This browser does not support location permission."));
+            return;
+          }
+
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              resolve({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+              });
+            },
+            (error) => {
+              const messages = {
+                1: "Location permission was denied. Allow location or type your city name.",
+                2: "Your location is unavailable right now. Type your city name instead.",
+                3: "Location permission timed out. Try again or type your city name.",
+              };
+              reject(new Error(messages[error.code] || "Location permission failed."));
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 5 * 60 * 1000,
+            }
+          );
+        });
       }
 
       function userLanguageInstruction(message) {
@@ -5620,6 +5802,35 @@
         return cleanAssistantText(response);
       }
 
+      function looksLikeIncompleteReply(text) {
+        const value = String(text || "").trim();
+        if (value.length < 160) {
+          return false;
+        }
+        const lastLine = value.split("\n").map((line) => line.trim()).filter(Boolean).pop() || value;
+        if (/[.!?)]$/.test(lastLine)) {
+          return false;
+        }
+        if (/^(sources?|references?):?$/i.test(lastLine)) {
+          return true;
+        }
+        if (/[:;,]$/.test(lastLine)) {
+          return true;
+        }
+        if (/\b(a|an|the|to|for|with|and|or|of|in|on|at|by|from|as|that|which|your|their|this|these|those)$/i.test(lastLine)) {
+          return true;
+        }
+        return value.length > 900 && !/[.!?]$/.test(value);
+      }
+
+      function completeReplyIfCutOff(text, forceNotice = false) {
+        const reply = cleanAssistantText(text);
+        if (!reply || (!forceNotice && !looksLikeIncompleteReply(reply))) {
+          return reply;
+        }
+        return `${reply}\n\nThe reply appears to have stopped before it fully finished. Send \"continue\" and Ved will continue from this point.`;
+      }
+
       function cleanAssistantText(value) {
         if (typeof value === "string") {
           const text = value.trim();
@@ -5679,7 +5890,7 @@
           {
             role: "system",
             content:
-              `You are Ved, a friendly and professional AI assistant. Give complete, well-structured answers with practical details, examples, steps, or caveats when useful. Choose the best format for the question: natural paragraphs for advice and conceptual explanations, numbered steps for procedures, bullets for short grouped ideas, tables for comparisons or structured data, and simple text charts only when they improve clarity. Avoid excessive raw Markdown decoration such as repeated double-asterisk bold markers. ` +
+              `You are Ved, a friendly and professional AI assistant. Prefer concise, direct answers unless the user asks for detail or the topic needs careful explanation. Choose the best format for the question: natural paragraphs for advice and conceptual explanations, numbered steps for procedures, bullets for short grouped ideas, tables for comparisons or structured data, and simple text charts only when they improve clarity. Avoid excessive raw Markdown decoration such as repeated double-asterisk bold markers. ` +
               `For follow-up questions, use the recent conversation as context and answer directly instead of asking the user to repeat details. Avoid unnecessary opening filler so replies arrive and read faster. ` +
               `If the user asks who created you, answer exactly: My creator is Vishal Raj,a student of class X B  SPSTDSC. ` +
               `Language rule: ${userLanguageInstruction(userText)} ` +
