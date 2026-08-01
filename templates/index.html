@@ -3656,7 +3656,7 @@
       const assistantModeStorageKey = `ved_assistant_mode_${currentUser.email}`;
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const promptRecentMessageCount = 8;
+      const promptRecentMessageCount = 12;
       const promptSummaryLimit = 1600;
       const promptMessageLimit = 700;
       const maxAttachmentCount = 4;
@@ -5869,6 +5869,65 @@
         return "";
       }
 
+      function isFollowUpMessage(message) {
+        const normalized = String(message || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (!normalized) {
+          return false;
+        }
+        const exactHints = new Set([
+          "continue",
+          "continue please",
+          "go on",
+          "carry on",
+          "explain more",
+          "more",
+          "tell me more",
+          "make it shorter",
+          "shorter",
+          "summarize",
+          "summarise",
+          "simplify",
+          "in simple words",
+          "what about this",
+          "what about it",
+          "why",
+          "how",
+          "give example",
+          "give examples",
+        ]);
+        if (exactHints.has(normalized)) {
+          return true;
+        }
+        const words = normalized.split(" ");
+        return words.length <= 5 &&
+          ["explain", "more", "continue", "short", "simple", "example", "why", "how", "it", "this", "that"]
+            .some((hint) => normalized.includes(hint));
+      }
+
+      function lastExchangeFocus(priorMessages) {
+        let previousUser = "";
+        let previousVed = "";
+        for (let index = priorMessages.length - 1; index >= 0; index -= 1) {
+          const message = priorMessages[index];
+          if (!message || !message.content) {
+            continue;
+          }
+          if (message.role === "assistant" && !previousVed) {
+            previousVed = `Previous Ved answer: ${messagePromptContent(message)}`;
+          } else if (message.role === "user" && !previousUser) {
+            previousUser = `Previous user request: ${messagePromptContent(message)}`;
+          }
+          if (previousUser && previousVed) {
+            break;
+          }
+        }
+        return [previousUser, previousVed].filter(Boolean).join("\n");
+      }
+
       function buildBackupMessages(userText, priorMessages, useWebSearch) {
         const localNow = new Date().toLocaleString([], {
           weekday: "long",
@@ -5879,12 +5938,13 @@
           minute: "2-digit",
         });
         const recentMessages = priorMessages
-          .slice(-6)
+          .slice(-10)
           .map((message) => ({
             role: message.role,
             content: messagePromptContent(message),
           }))
           .filter((message) => ["user", "assistant"].includes(message.role) && message.content);
+        const followUpFocus = isFollowUpMessage(userText) ? lastExchangeFocus(priorMessages) : "";
 
         return [
           {
@@ -5900,6 +5960,13 @@
                 ? `Use web search for current or live information. Summarize professionally and include source names or links when available.`
                 : `Answer directly without claiming to have searched the web.`),
           },
+          ...(followUpFocus
+            ? [{
+                role: "system",
+                content:
+                  `Current follow-up focus:\n${followUpFocus}\nThe latest user message is a follow-up. Continue, clarify, transform, or expand the previous answer as requested. Do not ask the user to repeat the topic unless the focus is truly missing.`,
+              }]
+            : []),
           ...recentMessages,
           {
             role: "user",

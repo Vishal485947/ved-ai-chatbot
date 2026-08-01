@@ -20,7 +20,7 @@ services:
       - key: WEATHERCOM_API_KEY
         sync: false
       - key: PROMPT_RECENT_MESSAGES
-        value: "8"
+        value: "12"
       - key: PROMPT_SUMMARY_CHARS
         value: "1600"
       - key: PROMPT_MESSAGE_CHARS

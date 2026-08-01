@@ -45,7 +45,7 @@ SMART_REAL_TIME_SEARCH=true
 MAX_MESSAGES_PER_HOUR=20
 MAX_OUTPUT_TOKENS=1800
 WEATHERCOM_API_KEY=your_weather_com_api_key_here
-PROMPT_RECENT_MESSAGES=8
+PROMPT_RECENT_MESSAGES=12
 PROMPT_SUMMARY_CHARS=1600
 PROMPT_MESSAGE_CHARS=700
 SECRET_KEY=replace_with_a_long_random_secret
@@ -74,6 +74,9 @@ the reply back to the page.
 To reduce token usage, Ved sends only the most recent messages exactly and compresses
 older chat context into a short summary before calling Gemini. You can tune this with
 `PROMPT_RECENT_MESSAGES`, `PROMPT_SUMMARY_CHARS`, and `PROMPT_MESSAGE_CHARS`.
+Short follow-up prompts such as `continue`, `explain more`, `why`, or `make it
+shorter` are treated as references to the latest relevant exchange, so Ved can
+continue naturally without asking the user to repeat the topic.
 
 Ved also keeps real-time search smart. With `ENABLE_REAL_TIME_SEARCH=true` and
 `SMART_REAL_TIME_SEARCH=true`, Gemini Search grounding is used only for questions
@@ -119,7 +122,7 @@ SMART_REAL_TIME_SEARCH=true
 MAX_MESSAGES_PER_HOUR=20
 MAX_OUTPUT_TOKENS=1800
 WEATHERCOM_API_KEY=your_weather_com_api_key_here
-PROMPT_RECENT_MESSAGES=8
+PROMPT_RECENT_MESSAGES=12
 PROMPT_SUMMARY_CHARS=1600
 PROMPT_MESSAGE_CHARS=700
 SECRET_KEY=use_a_long_random_secret

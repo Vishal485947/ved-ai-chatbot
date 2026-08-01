@@ -722,8 +722,78 @@ def summarize_history_items(history, summary_limit, message_limit):
     return compact_text("\n".join(lines), summary_limit)
 
 
+FOLLOW_UP_HINTS = {
+    "continue",
+    "continue please",
+    "go on",
+    "carry on",
+    "explain more",
+    "more",
+    "tell me more",
+    "make it shorter",
+    "shorter",
+    "summarize",
+    "summarise",
+    "simplify",
+    "in simple words",
+    "what about this",
+    "what about it",
+    "why",
+    "how",
+    "give example",
+    "give examples",
+}
+
+
+def is_follow_up_message(message):
+    normalized = " ".join(re.sub(r"[^a-z0-9]+", " ", str(message or "").lower()).split())
+    if not normalized:
+        return False
+    if normalized in FOLLOW_UP_HINTS:
+        return True
+    if len(normalized.split()) <= 5 and any(
+        phrase in normalized
+        for phrase in [
+            "explain",
+            "more",
+            "continue",
+            "short",
+            "simple",
+            "example",
+            "why",
+            "how",
+            "it",
+            "this",
+            "that",
+        ]
+    ):
+        return True
+    return False
+
+
+def last_exchange_focus(history, message_limit):
+    if not isinstance(history, list):
+        return ""
+
+    user_line = ""
+    assistant_line = ""
+    for item in reversed(history):
+        if not isinstance(item, dict):
+            continue
+        role = item.get("role")
+        content = compact_text(item.get("content"), message_limit)
+        if role == "assistant" and content and not assistant_line:
+            assistant_line = f"Previous Ved answer: {content}"
+        elif role == "user" and content and not user_line:
+            user_line = f"Previous user request: {content}"
+        if user_line and assistant_line:
+            break
+
+    return "\n".join(line for line in [user_line, assistant_line] if line)
+
+
 def build_conversation_context(history, user_message, context_summary):
-    recent_count = env_int("PROMPT_RECENT_MESSAGES", 8, 2, 20)
+    recent_count = env_int("PROMPT_RECENT_MESSAGES", 12, 4, 24)
     summary_limit = env_int("PROMPT_SUMMARY_CHARS", 1600, 300, 5000)
     message_limit = env_int("PROMPT_MESSAGE_CHARS", 700, 120, 2000)
 
@@ -745,6 +815,15 @@ def build_conversation_context(history, user_message, context_summary):
     ]
     if recent_lines:
         context.append("Recent conversation:\n" + "\n".join(recent_lines))
+
+    if is_follow_up_message(user_message):
+        focus = last_exchange_focus(history, message_limit)
+        if focus:
+            context.append(
+                "Current follow-up focus:\n"
+                + focus
+                + "\nThe latest user message is a follow-up. Continue, clarify, transform, or expand the previous answer as requested. Do not ask the user to repeat the topic unless the focus is truly missing."
+            )
 
     context.append("Language instruction: " + prompt_language_instruction(user_message))
     context.append(f"User: {compact_text(user_message, message_limit)}")
@@ -1587,9 +1666,6 @@ def build_weathercom_forecast_reply(latitude, longitude, label="your location", 
 
     if forecast_lines:
         lines.append("5-day forecast:\n" + "\n".join(forecast_lines))
-    if accuracy is not None:
-        lines.append(f"Location note: browser location accuracy was about {accuracy} meters.")
-
     return {
         "reply": "\n".join(lines),
         "sources": [
@@ -1695,11 +1771,6 @@ def build_weather_forecast_reply(message, browser_location=None):
 
     if forecast_lines:
         lines.append("5-day forecast:\n" + "\n".join(forecast_lines))
-
-    if browser_location:
-        lines.append(f"Location note: browser location accuracy was about {browser_location.get('accuracy') or 'unknown'} meters. Add WEATHERCOM_API_KEY on Render to use Weather.com as the primary provider.")
-    elif matched_query.lower() != location_query.lower():
-        lines.append(f"Location note: I searched for {matched_query} because {location_query} was not an exact weather-location match.")
 
     return {
         "reply": "\n".join(lines),
