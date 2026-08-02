@@ -1283,6 +1283,37 @@ def weather_code_description(code):
     return descriptions.get(numeric_code, "mixed conditions")
 
 
+def hinglish_weather_description(description):
+    """Translate common provider weather phrases without changing units or names."""
+    normalized = " ".join(str(description or "").lower().split())
+    descriptions = {
+        "clear sky": "aasman saaf hai",
+        "mainly clear": "zyadatar aasman saaf hai",
+        "partly cloudy": "thode badal hain",
+        "overcast": "aasman mein ghane badal hain",
+        "fog": "kohra hai",
+        "rime fog": "kohra hai",
+        "light drizzle": "halki boondabandi hai",
+        "moderate drizzle": "boondabandi ho rahi hai",
+        "dense drizzle": "tez boondabandi ho rahi hai",
+        "slight rain": "halki barish hai",
+        "moderate rain": "barish ho rahi hai",
+        "heavy rain": "tez barish ho rahi hai",
+        "slight snow": "halki barfbaari hai",
+        "moderate snow": "barfbaari ho rahi hai",
+        "heavy snow": "tez barfbaari hai",
+        "slight rain showers": "halki barish ke chhente hain",
+        "moderate rain showers": "barish ke chhente hain",
+        "violent rain showers": "tez barish ke chhente hain",
+        "thunderstorm": "garaj ke saath barish ho sakti hai",
+        "thunderstorm with hail": "garaj aur ole padne ki sambhavna hai",
+        "thunderstorm with heavy hail": "garaj aur tez ole padne ki sambhavna hai",
+        "conditions unavailable": "mausam ki jankari abhi available nahi hai",
+        "mixed conditions": "mausam badalta hua hai",
+    }
+    return descriptions.get(normalized, normalized or "mausam ki jankari available nahi hai")
+
+
 def format_number(value, decimals=0):
     if value is None:
         return "n/a"
@@ -1630,7 +1661,7 @@ def weathercom_daypart_value(daypart, key, index=0):
     return None
 
 
-def build_weathercom_forecast_reply(latitude, longitude, label="your location", accuracy=None):
+def build_weathercom_forecast_reply(latitude, longitude, label="your location", accuracy=None, hinglish=False):
     api_key = os.getenv("WEATHERCOM_API_KEY", "").strip()
     if not api_key:
         return None
@@ -1661,10 +1692,16 @@ def build_weathercom_forecast_reply(latitude, longitude, label="your location", 
     uv_index = current.get("uvIndex")
     precip_1h = first_present(current.get("precip1Hour"), current.get("precip24Hour"))
 
-    lines = [
-        f"Current weather for {obs_label}: {format_number(temperature, 1)} degrees C and {str(phrase).lower()}.",
-        f"Feels like {format_number(feels_like, 1)} degrees C, humidity {format_number(humidity)}%, wind {format_number(wind_speed)} km/h{f' from {wind_direction}' if wind_direction else ''}.",
-    ]
+    if hinglish:
+        lines = [
+            f"{obs_label} ka abhi ka mausam: {format_number(temperature, 1)} degrees C, {hinglish_weather_description(phrase)}.",
+            f"Mehsoos {format_number(feels_like, 1)} degrees C jaisa ho raha hai; humidity {format_number(humidity)}% hai aur hawa lagbhag {format_number(wind_speed)} km/h chal rahi hai.",
+        ]
+    else:
+        lines = [
+            f"Current weather for {obs_label}: {format_number(temperature, 1)} degrees C and {str(phrase).lower()}.",
+            f"Feels like {format_number(feels_like, 1)} degrees C, humidity {format_number(humidity)}%, wind {format_number(wind_speed)} km/h{f' from {wind_direction}' if wind_direction else ''}.",
+        ]
     detail_parts = []
     if precip_1h is not None:
         detail_parts.append(f"precipitation {format_number(precip_1h, 1)} mm")
@@ -1675,7 +1712,7 @@ def build_weathercom_forecast_reply(latitude, longitude, label="your location", 
     if uv_index is not None:
         detail_parts.append(f"UV index {format_number(uv_index)}")
     if detail_parts:
-        lines.append("Additional details: " + "; ".join(detail_parts) + ".")
+        lines.append(("Aur details: " if hinglish else "Additional details: ") + "; ".join(detail_parts) + ".")
 
     dates = daily.get("validTimeLocal") or daily.get("dayOfWeek") or []
     max_temps = daily.get("calendarDayTemperatureMax") or daily.get("temperatureMax") or []
@@ -1693,14 +1730,19 @@ def build_weathercom_forecast_reply(latitude, longitude, label="your location", 
             weathercom_daypart_value(daypart, "precipChance", index * 2 + 1),
         )
         narrative = narratives[index] if index < len(narratives) else ""
+        if hinglish:
+            narrative = hinglish_weather_description(
+                weathercom_daypart_value(daypart, "wxPhraseLong", index * 2) or narrative
+            )
         forecast_lines.append(
             f"{day_label}: {format_number(max_temps[index], 1)}/{format_number(min_temps[index], 1)} degrees C"
-            + (f", rain chance {format_number(precip_chance)}%" if precip_chance is not None else "")
+            + (f", barish ki sambhavna {format_number(precip_chance)}%" if hinglish and precip_chance is not None else "")
+            + (f", rain chance {format_number(precip_chance)}%" if not hinglish and precip_chance is not None else "")
             + (f". {narrative}" if narrative else ".")
         )
 
     if forecast_lines:
-        lines.append("5-day forecast:\n" + "\n".join(forecast_lines))
+        lines.append(("Agle 5 din ka forecast:\n" if hinglish else "5-day forecast:\n") + "\n".join(forecast_lines))
     return {
         "reply": "\n".join(lines),
         "sources": [
@@ -1715,6 +1757,7 @@ def build_weather_forecast_reply(message, browser_location=None):
         return None
 
     browser_location = validated_browser_location(browser_location)
+    hinglish = is_romanized_hinglish(message)
     location_query = extract_weather_location(message)
     uses_browser_location = bool(browser_location and is_user_location_weather_query(message))
 
@@ -1726,19 +1769,19 @@ def build_weather_forecast_reply(message, browser_location=None):
         matched_query = ""
     elif is_user_location_weather_query(message):
         return {
-            "reply": "Please allow location permission in your browser, or type your city name so I can check the weather.",
+            "reply": "Browser mein location permission allow kijiye, ya apne city ka naam likhiye taaki main mausam check kar sakun." if hinglish else "Please allow location permission in your browser, or type your city name so I can check the weather.",
             "sources": [],
         }
     elif not location_query:
         return {
-            "reply": "Which city or place should I check the weather for?",
+            "reply": "Aap kis city ya jagah ka mausam check karwana chahte hain?" if hinglish else "Which city or place should I check the weather for?",
             "sources": [],
         }
     else:
         location, geocode_url, matched_query = geocode_weather_location(location_query)
         if not location:
             return {
-                "reply": f"I could not find a weather location for {location_query}. Try a nearby city name.",
+                "reply": f"Mujhe {location_query} ke liye weather location nahi mili. Kripya paas ke kisi city ka naam try kijiye." if hinglish else f"I could not find a weather location for {location_query}. Try a nearby city name.",
                 "sources": [{"title": "Open-Meteo Geocoding", "uri": geocode_url}],
             }
 
@@ -1758,6 +1801,7 @@ def build_weather_forecast_reply(message, browser_location=None):
         float(longitude),
         label=label,
         accuracy=browser_location.get("accuracy") if browser_location else None,
+        hinglish=hinglish,
     )
     if weathercom_result:
         return weathercom_result
@@ -1779,10 +1823,16 @@ def build_weather_forecast_reply(message, browser_location=None):
     temp_unit = clean_unit(current_units.get("temperature_2m"), "C")
     wind_unit = clean_unit(current_units.get("wind_speed_10m"), "km/h")
     current_description = weather_code_description(current.get("weather_code"))
-    lines = [
-        f"Current weather for {label}: {format_number(current.get('temperature_2m'), 1)} degrees {temp_unit} and {current_description}.",
-        f"It feels like {format_number(current.get('apparent_temperature'), 1)} degrees {temp_unit}, with humidity at {format_number(current.get('relative_humidity_2m'))}% and wind around {format_number(current.get('wind_speed_10m'))} {wind_unit}.",
-    ]
+    if hinglish:
+        lines = [
+            f"{label} ka abhi ka mausam: {format_number(current.get('temperature_2m'), 1)} degrees {temp_unit}, {hinglish_weather_description(current_description)}.",
+            f"Mehsoos {format_number(current.get('apparent_temperature'), 1)} degrees {temp_unit} jaisa ho raha hai; humidity {format_number(current.get('relative_humidity_2m'))}% hai aur hawa lagbhag {format_number(current.get('wind_speed_10m'))} {wind_unit} chal rahi hai.",
+        ]
+    else:
+        lines = [
+            f"Current weather for {label}: {format_number(current.get('temperature_2m'), 1)} degrees {temp_unit} and {current_description}.",
+            f"It feels like {format_number(current.get('apparent_temperature'), 1)} degrees {temp_unit}, with humidity at {format_number(current.get('relative_humidity_2m'))}% and wind around {format_number(current.get('wind_speed_10m'))} {wind_unit}.",
+        ]
 
     times = daily.get("time") or []
     max_temps = daily.get("temperature_2m_max") or []
@@ -1801,11 +1851,12 @@ def build_weather_forecast_reply(message, browser_location=None):
         weather_code = weather_codes[index] if index < len(weather_codes) else None
         rain_chance = rain_chances[index] if index < len(rain_chances) else None
         forecast_lines.append(
-            f"- {day_label}: {format_number(max_temp, 1)}/{format_number(min_temp, 1)} degrees, {weather_code_description(weather_code)}, rain chance {format_number(rain_chance)}%"
+            f"- {day_label}: {format_number(max_temp, 1)}/{format_number(min_temp, 1)} degrees, "
+            + (f"{hinglish_weather_description(weather_code_description(weather_code))}, barish ki sambhavna {format_number(rain_chance)}%" if hinglish else f"{weather_code_description(weather_code)}, rain chance {format_number(rain_chance)}%")
         )
 
     if forecast_lines:
-        lines.append("5-day forecast:\n" + "\n".join(forecast_lines))
+        lines.append(("Agle 5 din ka forecast:\n" if hinglish else "5-day forecast:\n") + "\n".join(forecast_lines))
 
     return {
         "reply": "\n".join(lines),
@@ -2417,7 +2468,7 @@ def chat():
             weather_result = build_weather_forecast_reply(user_message, browser_location)
         except Exception:
             weather_result = {
-                "reply": "I could not fetch the live weather forecast right now. Please try again in a minute.",
+                "reply": "Main abhi live weather forecast fetch nahi kar pa raha hoon. Kripya ek minute baad phir try kijiye." if is_romanized_hinglish(user_message) else "I could not fetch the live weather forecast right now. Please try again in a minute.",
                 "sources": [],
             }
 
