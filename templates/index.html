@@ -5170,7 +5170,31 @@
           return `The user's latest message is written in ${matchedProfile.name}. Reply only in that same language/script unless the user explicitly asks for translation or another language.`;
         }
 
+        if (isRomanizedHinglish(text)) {
+          return "The user's latest message is Roman-script Hinglish. Reply in natural Roman-script Hinglish (Hindi mixed with English as the user does), not in English-only or Devanagari Hindi. Keep code, commands, proper names, and unavoidable technical terms unchanged unless the user asks otherwise.";
+        }
+
         return "Reply in the same language as the user's latest message. If it is English, reply in English. If it is romanized Hindi, Hinglish, or another romanized language, match that style instead of switching to English. Only translate or switch languages when the user explicitly asks.";
+      }
+
+      function isRomanizedHinglish(message) {
+        const text = String(message || "").trim();
+        if (!text || /[^\x00-\x7F]/.test(text)) return false;
+
+        const strongWords = new Set([
+          "aap", "aapka", "aapki", "aapko", "accha", "achha", "abhi", "batao",
+          "bataiye", "bhai", "chahiye", "dijiye", "hain", "hai", "kaise", "kaun",
+          "kaunsa", "kaunsi", "karna", "karun", "karo", "kya", "kyu", "kyun",
+          "mujhe", "mujhko", "nahi", "nahin", "nhi", "sikhao", "samjhao", "tum",
+          "tumhara", "tumhe", "wala", "wali", "yaar",
+        ]);
+        const decisiveWords = new Set([
+          "aap", "aapko", "bataiye", "chahiye", "kaise", "kaun", "kaunsa", "kaunsi",
+          "karna", "kya", "kyu", "kyun", "mujhe", "mujhko", "nahi", "nahin", "nhi",
+          "sikhao", "samjhao", "tumhe", "yaar",
+        ]);
+        const matches = (text.toLowerCase().match(/[a-z]+/g) || []).filter((word) => strongWords.has(word));
+        return matches.length > 0 && (matches.length >= 2 || matches.some((word) => decisiveWords.has(word)));
       }
 
       function isImageGenerationRequest(message) {

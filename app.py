@@ -639,6 +639,33 @@ def compact_text(value, max_chars):
     return text[: max_chars - 3].rstrip() + "..."
 
 
+ROMANIZED_HINDI_STRONG_WORDS = {
+    "aap", "aapka", "aapki", "aapko", "accha", "achha", "abhi", "batao",
+    "bataiye", "bhai", "chahiye", "dijiye", "hain", "hai", "kaise", "kaun",
+    "kaunsa", "kaunsi", "karna", "karun", "karo", "kya", "kyu", "kyun",
+    "mujhe", "mujhko", "nahi", "nahin", "nhi", "sikhao", "samjhao", "tum",
+    "tumhara", "tumhe", "wala", "wali", "yaar",
+}
+
+
+def is_romanized_hinglish(message):
+    """Return True for Roman-script Hindi/Hinglish while avoiding plain English."""
+    text = str(message or "").strip()
+    if not text or re.search(r"[^\x00-\x7F]", text):
+        return False
+
+    words = re.findall(r"[a-z]+", text.lower())
+    matches = [word for word in words if word in ROMANIZED_HINDI_STRONG_WORDS]
+    # One unmistakably Hindi word is sufficient; requiring two common signals avoids
+    # treating ordinary English sentences as Hinglish by accident.
+    return bool(matches) and (len(matches) >= 2 or any(
+        word in {"aap", "aapko", "bataiye", "chahiye", "kaise", "kaun", "kaunsa",
+                 "kaunsi", "karna", "kya", "kyu", "kyun", "mujhe", "mujhko",
+                 "nahi", "nahin", "nhi", "sikhao", "samjhao", "tumhe", "yaar"}
+        for word in matches
+    ))
+
+
 def prompt_language_instruction(message):
     text = str(message or "").strip()
     if not text:
@@ -665,6 +692,14 @@ def prompt_language_instruction(message):
                 f"The user's latest message is written in {language_name}. "
                 "Reply only in that same language/script unless the user explicitly asks for translation or another language."
             )
+
+    if is_romanized_hinglish(text):
+        return (
+            "The user's latest message is Roman-script Hinglish. Reply in natural "
+            "Roman-script Hinglish (Hindi mixed with English as the user does), not "
+            "in English-only or Devanagari Hindi. Keep code, commands, proper names, "
+            "and unavoidable technical terms unchanged unless the user asks otherwise."
+        )
 
     return (
         "Reply in the same language as the user's latest message. "
@@ -2091,6 +2126,8 @@ def quick_local_reply(message, user_name):
 
     if words and len(words) <= 3 and all(word in greeting_words for word in words):
         name = (user_name or "there").split()[0]
+        if is_romanized_hinglish(message):
+            return f"Hi {name}! Main yahan hoon. Aapko kis cheez mein help chahiye?"
         return f"Hi {name}! I am here. What would you like help with today?"
 
     return ""
