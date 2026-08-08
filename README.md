@@ -51,9 +51,6 @@ PROMPT_MESSAGE_CHARS=700
 SECRET_KEY=replace_with_a_long_random_secret
 GOOGLE_CLIENT_ID=your_google_oauth_client_id
 GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
-ELEVENLABS_API_KEY=your_elevenlabs_api_key
-ELEVENLABS_VOICE_ID=your_cloned_voice_id
-ELEVENLABS_MODEL=eleven_flash_v2_5
 ```
 
 7. Run the app:
@@ -68,14 +65,12 @@ python app.py
 http://127.0.0.1:5000
 ```
 
-## Ved Robo custom voice
+## Ved Robo browser voice
 
-Ved Robo uses the `/api/robo-speech` backend endpoint to turn each AI reply into
-audio with the configured ElevenLabs custom voice. Create a voice from recordings
-you have permission to use, then set `ELEVENLABS_API_KEY` and
-`ELEVENLABS_VOICE_ID` locally and in Render's Environment settings. Do not commit
-these secret values. The Robo screen includes browser speech recognition language
-choices; availability varies by browser.
+Ved Robo uses the browser's built-in text-to-speech voice, so it needs no paid
+speech account or server-side voice key. The selected language is used for both
+speech recognition and spoken replies. Users must install a matching voice in
+their browser or operating system when their device does not include one.
 
 ## How It Works
 
