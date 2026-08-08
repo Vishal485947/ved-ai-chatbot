@@ -11,13 +11,15 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from urllib.parse import urlencode, urlparse
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
+from xml.sax.saxutils import escape as xml_escape
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
-from flask import jsonify, redirect, render_template, request, session, url_for
+from flask import Response, jsonify, redirect, render_template, request, session, url_for
 from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -2224,6 +2226,58 @@ def robo_home():
     if not session.get("user"):
         return redirect(url_for("login"))
     return render_template("robo.html", user=session.get("user"))
+
+
+@app.post("/api/robo-speech")
+def robo_speech():
+    """Create server-side speech so Ved Robo works consistently across devices."""
+    if not require_user_email():
+        return jsonify({"error": "Please log in first."}), 401
+
+    api_key = (os.getenv("AZURE_SPEECH_KEY") or "").strip()
+    region = (os.getenv("AZURE_SPEECH_REGION") or "").strip()
+    if not api_key or not region:
+        return jsonify({"error": "Azure speech is not configured yet. Add AZURE_SPEECH_KEY and AZURE_SPEECH_REGION in Render."}), 503
+
+    data = request.get_json(silent=True) or {}
+    text = re.sub(r"\s+", " ", str(data.get("text") or "")).strip()[:4500]
+    locale = str(data.get("language") or "en-US")
+    if not text:
+        return jsonify({"error": "There is no reply to speak."}), 400
+    if not re.fullmatch(r"[a-z]{2,3}-[A-Z]{2}", locale):
+        locale = "en-US"
+
+    voices = {
+        "hi-IN": "hi-IN-MadhurNeural", "bn-IN": "bn-IN-BashkarNeural", "gu-IN": "gu-IN-NiranjanNeural",
+        "kn-IN": "kn-IN-GaganNeural", "ml-IN": "ml-IN-MidhunNeural", "mr-IN": "mr-IN-ManoharNeural",
+        "pa-IN": "pa-IN-GurpreetNeural", "ta-IN": "ta-IN-ValluvarNeural", "te-IN": "te-IN-MohanNeural",
+        "ur-PK": "ur-PK-AsadNeural", "ar-SA": "ar-SA-HamedNeural", "zh-CN": "zh-CN-YunxiNeural",
+        "fr-FR": "fr-FR-HenriNeural", "de-DE": "de-DE-ConradNeural", "es-ES": "es-ES-AlvaroNeural",
+        "ja-JP": "ja-JP-KeitaNeural", "ko-KR": "ko-KR-InJoonNeural", "pt-BR": "pt-BR-AntonioNeural",
+        "ru-RU": "ru-RU-DmitryNeural", "tr-TR": "tr-TR-AhmetNeural", "vi-VN": "vi-VN-NamMinhNeural",
+    }
+    voice = voices.get(locale, "en-US-GuyNeural")
+    ssml = f"<speak version='1.0' xml:lang='{locale}'><voice name='{voice}'>{xml_escape(text)}</voice></speak>".encode("utf-8")
+    azure_request = Request(
+        f"https://{region}.tts.speech.microsoft.com/cognitiveservices/v1",
+        data=ssml,
+        headers={
+            "Ocp-Apim-Subscription-Key": api_key,
+            "Content-Type": "application/ssml+xml",
+            "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3",
+            "User-Agent": "VedRobo",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(azure_request, timeout=30) as azure_response:
+            return Response(azure_response.read(), mimetype="audio/mpeg", headers={"Cache-Control": "no-store, private"})
+    except HTTPError as error:
+        return jsonify({"error": f"Azure Speech rejected this request ({error.code}). Check the key, region, voice, and free quota."}), 502
+    except (URLError, TimeoutError):
+        return jsonify({"error": "Ved Robo could not reach Azure Speech. Please try again."}), 503
+    except Exception:
+        return jsonify({"error": "Ved Robo speech is temporarily unavailable."}), 503
 
 
 @app.get("/healthz")
