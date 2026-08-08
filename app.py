@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from urllib.parse import urlencode, urlparse
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -2267,6 +2268,18 @@ def robo_speech():
     try:
         with urlopen(voice_request, timeout=45) as voice_response:
             audio = voice_response.read()
+    except HTTPError as error:
+        try:
+            provider_detail = json.loads(error.read().decode("utf-8")).get("detail", {})
+            provider_message = provider_detail.get("message") if isinstance(provider_detail, dict) else ""
+        except Exception:
+            provider_message = ""
+        safe_message = provider_message or "Check the API key, custom voice ID, model, quota, and account permissions."
+        return jsonify({
+            "error": f"ElevenLabs rejected the voice request ({error.code}): {safe_message}"
+        }), 502
+    except (URLError, TimeoutError):
+        return jsonify({"error": "Ved Robo could not reach the voice service. Please try again."}), 503
     except Exception:
         return jsonify({"error": "Ved Robo voice is temporarily unavailable. The text reply is still ready."}), 503
 
