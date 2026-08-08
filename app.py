@@ -972,11 +972,15 @@ def user_timezone(timezone_name):
         return "UTC", timezone.utc
 
 
-def build_system_prompt(timezone_name, user_message=""):
+def build_system_prompt(timezone_name, user_message="", response_language=""):
     timezone_label, tzinfo = user_timezone(timezone_name)
     user_now = datetime.now(tzinfo)
     utc_now = datetime.now(timezone.utc)
-    language_instruction = prompt_language_instruction(user_message)
+    language_instruction = (
+        f"Reply in {response_language}. Keep proper nouns, URLs, and code unchanged."
+        if response_language
+        else prompt_language_instruction(user_message)
+    )
 
     return f"""
 {SYSTEM_PROMPT.strip()}
@@ -2495,6 +2499,7 @@ def chat():
     history = data.get("history") or []
     context_summary = data.get("contextSummary") or ""
     timezone_name = data.get("timezone") or "UTC"
+    response_language = re.sub(r"[^A-Za-z -]", "", str(data.get("responseLanguage") or "")).strip()[:50]
     attachments = data.get("attachments") or []
     browser_location = validated_browser_location(data.get("location"))
     project_id = normalize_project_id(data.get("projectId"))
@@ -2531,7 +2536,7 @@ def chat():
             "memorySaved": saved_memory,
         })
 
-    local_reply = "" if attachments else quick_local_reply(user_message, session.get("user", {}).get("name"))
+    local_reply = "" if attachments or response_language else quick_local_reply(user_message, session.get("user", {}).get("name"))
     if local_reply:
         return jsonify({
             "reply": local_reply,
@@ -2540,7 +2545,7 @@ def chat():
             "memorySaved": saved_memory,
         })
 
-    if is_weather_query(user_message) and not attachments:
+    if is_weather_query(user_message) and not attachments and not response_language:
         try:
             weather_result = build_weather_forecast_reply(user_message, browser_location)
         except Exception:
@@ -2648,7 +2653,7 @@ def chat():
         for model in model_candidates:
             try:
                 config_options = {
-                    "system_instruction": build_system_prompt(timezone_name, user_message),
+                    "system_instruction": build_system_prompt(timezone_name, user_message, response_language),
                     "max_output_tokens": env_int("MAX_OUTPUT_TOKENS", 1800, 400, 4096),
                 }
                 if should_use_real_time_search(user_message):
