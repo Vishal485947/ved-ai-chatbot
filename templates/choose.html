@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Choose Ved</title>
+  <link rel="icon" href="{{ url_for('static', filename='ved-logo.png') }}" type="image/png">
+  <style>
+    :root { font-family: Arial, sans-serif; color: #202331; background: #f8f6f0; }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 28px; background: radial-gradient(circle at 16% 14%, #ddf9ff 0, transparent 26rem), radial-gradient(circle at 90% 84%, #eee4ff 0, transparent 30rem), #f8f6f0; }
+    main { width: min(960px, 100%); }
+    nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 48px; }
+    .brand { display: flex; align-items: center; gap: 10px; color: #25283a; font-weight: 800; text-decoration: none; }
+    .brand img { width: 36px; height: 36px; }
+    .logout { color: #635e55; font-size: 14px; text-decoration: none; }
+    .intro { max-width: 620px; margin: 0 auto 34px; text-align: center; }
+    .intro p { margin: 0 0 10px; color: #756f65; }
+    h1 { margin: 0; font-size: clamp(32px, 6vw, 54px); letter-spacing: -0.05em; }
+    .choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+    .choice { position: relative; min-height: 360px; display: flex; flex-direction: column; align-items: flex-start; padding: 28px; overflow: hidden; border: 1px solid #ddd6c8; border-radius: 28px; background: rgba(255,255,255,.86); color: inherit; text-decoration: none; box-shadow: 0 18px 50px rgba(48, 42, 32, .08); transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease; }
+    .choice:hover, .choice:focus-visible { transform: translateY(-6px); border-color: #8e70df; box-shadow: 0 25px 60px rgba(82, 59, 138, .18); outline: none; }
+    .number { color: #8869d1; font-size: 13px; font-weight: 800; letter-spacing: .12em; }
+    .choice h2 { margin: 13px 0 8px; font-size: 27px; }
+    .choice p { max-width: 270px; margin: 0; color: #716a60; line-height: 1.5; }
+    .open { margin-top: auto; display: inline-flex; align-items: center; min-height: 40px; padding: 0 15px; border-radius: 999px; background: #292536; color: white; font-size: 14px; font-weight: 700; }
+    .chat-art { position: absolute; right: 24px; bottom: 22px; width: 160px; height: 130px; padding: 16px; border-radius: 26px 26px 4px 26px; background: #eee9ff; color: #7057bb; font-size: 15px; font-weight: 700; transform: rotate(-4deg); }
+    .chat-art::after { content: ""; position: absolute; right: 0; bottom: -16px; border: 17px solid transparent; border-right-color: #eee9ff; border-top: 0; }
+    .robo-choice { background: linear-gradient(145deg, #fcfeff, #e5f9ff); }
+    .robo-art { position: absolute; right: 16px; bottom: 10px; width: 205px; height: 240px; }
+    .robo-art .base { fill: #d9b88a; stroke: #5b4938; stroke-width: 4; }
+    .robo-art .body { fill: #e7c99c; stroke: #5b4938; stroke-width: 4; }
+    .robo-art .screen { fill: #3a322e; stroke: #5b4938; stroke-width: 4; }
+    .robo-art .cyan { fill: #43d7f2; }
+    .robo-art .arm { fill: #d7b17d; stroke: #5b4938; stroke-width: 4; transform-box: fill-box; transform-origin: center top; }
+    .robo-choice:hover .arm.right { animation: wave .65s ease-in-out infinite alternate; }
+    @keyframes wave { to { transform: rotate(-22deg); } }
+    @media (max-width: 650px) { body { padding: 18px; } nav { margin-bottom: 30px; } .choices { grid-template-columns: 1fr; } .choice { min-height: 300px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <nav><a class="brand" href="{{ url_for('home') }}"><img src="{{ url_for('static', filename='ved-logo.png') }}" alt="">Ved AI</a><a class="logout" href="{{ url_for('logout') }}">Log out</a></nav>
+    <section class="intro"><p>Welcome back, {{ user.name.split(' ')[0] if user.name else 'there' }}</p><h1>How would you like to talk with Ved?</h1></section>
+    <section class="choices" aria-label="Choose Ved experience">
+      <a class="choice" href="{{ url_for('ved_home') }}"><span class="number">01 / CLASSIC</span><h2>Ved Chatbot</h2><p>Use the complete Ved workspace for typing, files, projects, Canvas, saved history, and voice messages.</p><span class="open">Open chatbot</span><div class="chat-art">Ask, create, learn, and save.</div></a>
+      <a class="choice robo-choice" href="{{ url_for('robo_home') }}"><span class="number">02 / VOICE</span><h2>Ved Robo</h2><p>Talk naturally with Ved through voice. The robot listens, thinks, speaks, and uses friendly gestures.</p><span class="open">Meet Ved Robo</span>
+        <svg class="robo-art" viewBox="0 0 220 250" aria-hidden="true"><ellipse class="base" cx="110" cy="218" rx="70" ry="22"/><path class="body" d="M72 123 Q110 105 148 123 L160 194 Q110 213 60 194Z"/><path class="cyan" d="M86 128 Q110 117 134 128 L124 163 Q110 174 96 163Z"/><rect class="arm" x="45" y="132" width="26" height="65" rx="13"/><rect class="arm right" x="149" y="132" width="26" height="65" rx="13"/><rect class="body" x="67" y="35" width="86" height="75" rx="29"/><rect class="screen" x="75" y="43" width="70" height="54" rx="20"/><circle class="cyan" cx="98" cy="70" r="11"/><circle class="cyan" cx="122" cy="70" r="11"/><rect class="cyan" x="58" y="60" width="8" height="22" rx="4"/><rect class="cyan" x="154" y="60" width="8" height="22" rx="4"/></svg>
+      </a>
+    </section>
+  </main>
+</body>
+</html>

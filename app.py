@@ -2205,12 +2205,21 @@ def add_no_cache_headers(response):
 
 @app.get("/")
 def home():
+    if session.get("user"):
+        return render_template("choose.html", user=session.get("user"))
     return render_template("index.html", user=session.get("user"))
 
 
 @app.get("/ved")
 def ved_home():
     return render_template("index.html", user=session.get("user"))
+
+
+@app.get("/robo")
+def robo_home():
+    if not session.get("user"):
+        return redirect(url_for("login"))
+    return render_template("robo.html", user=session.get("user"))
 
 
 @app.get("/healthz")
