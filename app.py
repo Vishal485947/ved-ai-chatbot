@@ -17,7 +17,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
-from flask import jsonify, redirect, render_template, request, session, url_for
+from flask import Response, jsonify, redirect, render_template, request, session, url_for
 from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -2220,6 +2220,61 @@ def robo_home():
     if not session.get("user"):
         return redirect(url_for("login"))
     return render_template("robo.html", user=session.get("user"))
+
+
+@app.post("/api/robo-speech")
+def robo_speech():
+    """Generate a private, on-demand Robo reply with the configured custom voice."""
+    if not require_user_email():
+        return jsonify({"error": "Please log in first."}), 401
+
+    api_key = (os.getenv("ELEVENLABS_API_KEY") or "").strip()
+    voice_id = (os.getenv("ELEVENLABS_VOICE_ID") or "").strip()
+    if not api_key or not voice_id:
+        return jsonify({
+            "error": "Custom Ved Robo voice is not configured yet. Add ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID in Render."
+        }), 503
+
+    data = request.get_json(silent=True) or {}
+    text = re.sub(r"\s+", " ", str(data.get("text") or "")).strip()
+    if not text:
+        return jsonify({"error": "There is no reply to speak."}), 400
+    if len(text) > 4500:
+        text = text[:4500]
+
+    model_id = (os.getenv("ELEVENLABS_MODEL") or "eleven_flash_v2_5").strip()
+    payload = json.dumps({
+        "text": text,
+        "model_id": model_id,
+        "voice_settings": {
+            "stability": 0.45,
+            "similarity_boost": 0.78,
+            "style": 0.35,
+            "use_speaker_boost": True,
+        },
+    }).encode("utf-8")
+    voice_url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    voice_request = Request(
+        voice_url,
+        data=payload,
+        headers={
+            "xi-api-key": api_key,
+            "Content-Type": "application/json",
+            "Accept": "audio/mpeg",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(voice_request, timeout=45) as voice_response:
+            audio = voice_response.read()
+    except Exception:
+        return jsonify({"error": "Ved Robo voice is temporarily unavailable. The text reply is still ready."}), 503
+
+    return Response(
+        audio,
+        mimetype="audio/mpeg",
+        headers={"Cache-Control": "no-store, private"},
+    )
 
 
 @app.get("/healthz")
