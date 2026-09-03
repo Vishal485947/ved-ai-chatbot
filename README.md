@@ -65,12 +65,17 @@ python app.py
 http://127.0.0.1:5000
 ```
 
-## Ved Robo browser voice
+## Ved Robo voice and camera profiles
 
-Ved Robo uses the browser's built-in text-to-speech voice, so it needs no paid
-speech account or server-side voice key. The selected language is used for both
-speech recognition and spoken replies. Users must install a matching voice in
-their browser or operating system when their device does not include one.
+Ved Robo generates spoken replies with Edge TTS, which does not need an account,
+API key, or credit card. If that service is unavailable, the browser voice is used
+as a fallback. Reply text is sent to the speech service to create the audio.
+
+The Robo screen can use the user's camera after permission is granted. Face
+descriptors, a small captured image, and the spoken name are stored only in that
+browser's local storage, never in Ved's server database. The Robo asks for spoken
+consent before saving a first-time visitor profile. Clearing browser site data
+removes those saved profiles.
 
 ## How It Works
 
