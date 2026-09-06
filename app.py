@@ -647,6 +647,18 @@ def env_int(name, default, minimum, maximum):
     return max(minimum, min(maximum, value))
 
 
+def compact_robo_reply(value, max_chars=560):
+    """Keep spoken reception answers short enough for the Robo subtitle panel."""
+    text = " ".join(str(value or "").split())
+    if len(text) <= max_chars:
+        return text
+    shortened = text[:max_chars]
+    sentence_end = max(shortened.rfind("."), shortened.rfind("!"), shortened.rfind("?"))
+    if sentence_end >= max_chars // 2:
+        return shortened[:sentence_end + 1]
+    return shortened.rsplit(" ", 1)[0].rstrip(" ,;:") + "…"
+
+
 def compact_text(value, max_chars):
     text = " ".join(str(value or "").split())
     if len(text) <= max_chars:
@@ -2629,6 +2641,7 @@ def chat():
     response_language = re.sub(r"[^A-Za-z -]", "", str(data.get("responseLanguage") or "")).strip()[:50]
     attachments = data.get("attachments") or []
     school_context_requested = bool(data.get("schoolContext"))
+    robo_mode = bool(data.get("roboMode"))
     browser_location = validated_browser_location(data.get("location"))
     project_id = normalize_project_id(data.get("projectId"))
     if not isinstance(history, list):
@@ -2695,6 +2708,8 @@ def chat():
         }), 429
 
     conversation = build_conversation_context(history, user_message, context_summary)
+    if robo_mode:
+        conversation.insert(-1, "Ved Robo reception mode: answer in at most 3 short sentences and 90 words. Give the direct answer first. Offer to explain more only when useful.")
     school_context = ""
     school_sources = []
     if school_context_requested:
@@ -2788,7 +2803,10 @@ def chat():
             try:
                 config_options = {
                     "system_instruction": build_system_prompt(timezone_name, user_message, response_language),
-                    "max_output_tokens": env_int("MAX_OUTPUT_TOKENS", 1800, 400, 4096),
+                    "max_output_tokens": min(
+                        env_int("MAX_OUTPUT_TOKENS", 1800, 400, 4096),
+                        220 if robo_mode else 4096,
+                    ),
                 }
                 if should_use_real_time_search(user_message) and not school_context_requested:
                     config_options["tools"] = [
@@ -2846,6 +2864,8 @@ def chat():
         answer = (response.text or "").strip()
         if not answer:
             answer = "I could not generate a reply for that. Please try asking another way."
+        if robo_mode:
+            answer = compact_robo_reply(answer)
         if is_live_news_query(user_message) and looks_like_no_live_access_reply(answer):
             if live_news_articles:
                 answer = format_live_news_fallback(live_news_query, live_news_articles)
