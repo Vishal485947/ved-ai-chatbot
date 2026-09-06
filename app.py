@@ -90,6 +90,18 @@ FALLBACK_GEMINI_MODELS = [
 ]
 
 VISITOR_MESSAGE_LOG = {}
+SCHOOL_SITE_PAGE_CACHE = {}
+SCHOOL_SITE_CACHE_SECONDS = 15 * 60
+SCHOOL_SITE_PAGES = [
+    ("School home", "https://salwanpublicschooltdsc.edu.in/", ()),
+    ("Admissions and fees", "https://salwanpublicschooltdsc.edu.in/admissions/", ("admission", "admissions", "fee", "fees", "register", "registration", "class xi", "class 11", "stream", "scholarship", "concession", "transport")),
+    ("Contact and directions", "https://salwanpublicschooltdsc.edu.in/contact-us/", ("contact", "phone", "number", "email", "address", "location", "where", "directions", "reach", "visit")),
+    ("Academic calendar", "https://salwanpublicschooltdsc.edu.in/annual-academic-calendar/", ("calendar", "holiday", "holidays", "exam", "examination", "date", "schedule", "timing", "timings")),
+    ("School policies", "https://salwanpublicschooltdsc.edu.in/school-policies-and-code-of-conduct/", ("policy", "policies", "conduct", "discipline", "rule", "rules", "uniform")),
+    ("Infrastructure", "https://salwanpublicschooltdsc.edu.in/infrastructure/", ("facility", "facilities", "infrastructure", "library", "laboratory", "lab", "sports", "ground", "classroom")),
+    ("Academics", "https://salwanpublicschooltdsc.edu.in/academics/", ("academic", "academics", "curriculum", "subject", "assessment", "result", "results")),
+    ("Activities and clubs", "https://salwanpublicschooltdsc.edu.in/co-curricular-activities/", ("club", "clubs", "activity", "activities", "house", "competition", "co curricular", "co-curricular")),
+]
 
 MAX_ATTACHMENTS = 4
 MAX_INLINE_ATTACHMENT_BYTES = 6 * 1024 * 1024
@@ -1146,6 +1158,46 @@ def strip_html(value):
     text = re.sub(r"(?is)<(script|style).*?>.*?</\1>", " ", value or "")
     text = re.sub(r"(?s)<[^>]+>", " ", text)
     return " ".join(text.split())
+
+
+def school_site_context(query):
+    """Fetch a small, cached, official-school context relevant to a reception question."""
+    normalized = " ".join(re.findall(r"[a-z0-9]+", str(query or "").lower()))
+    selected = [SCHOOL_SITE_PAGES[0]]
+    for page in SCHOOL_SITE_PAGES[1:]:
+        if any(term in normalized for term in page[2]):
+            selected.append(page)
+    selected = selected[:3]
+
+    context_parts = []
+    sources = []
+    now = time.time()
+    for title, url, _keywords in selected:
+        cached = SCHOOL_SITE_PAGE_CACHE.get(url)
+        if cached and now - cached["fetched_at"] < SCHOOL_SITE_CACHE_SECONDS:
+            text = cached["text"]
+        else:
+            try:
+                fetched = fetch_link_for_attachment(url)
+                text = compact_text(fetched.get("text") or "", 6500)
+                if text:
+                    SCHOOL_SITE_PAGE_CACHE[url] = {"fetched_at": now, "text": text}
+            except Exception:
+                text = ""
+        if not text:
+            continue
+        context_parts.append("Official school page - " + title + ":" + chr(10) + text)
+        sources.append({"title": title, "uri": url})
+
+    if not context_parts:
+        return "", []
+    instructions = (
+        "Official Salwan Public School, Trans Delhi Signature City source context follows. "
+        "Use it as the authority for school-related questions. Do not make up fees, dates, "
+        "admission availability, policies, phone numbers, staff details, or schedules. "
+        "If the answer is not present or is ambiguous, say so and direct the visitor to school reception or the official website."
+    )
+    return instructions + chr(10) * 2 + (chr(10) * 2).join(context_parts), sources
 
 
 def fetch_link_for_attachment(url):
@@ -2576,6 +2628,7 @@ def chat():
     timezone_name = data.get("timezone") or "UTC"
     response_language = re.sub(r"[^A-Za-z -]", "", str(data.get("responseLanguage") or "")).strip()[:50]
     attachments = data.get("attachments") or []
+    school_context_requested = bool(data.get("schoolContext"))
     browser_location = validated_browser_location(data.get("location"))
     project_id = normalize_project_id(data.get("projectId"))
     if not isinstance(history, list):
@@ -2642,6 +2695,12 @@ def chat():
         }), 429
 
     conversation = build_conversation_context(history, user_message, context_summary)
+    school_context = ""
+    school_sources = []
+    if school_context_requested:
+        school_context, school_sources = school_site_context(user_message)
+        if school_context:
+            conversation.insert(-1, school_context)
     project = get_project(email, project_id)
     if project:
         project_lines = [f"Active project: {project.get('name')}."]
@@ -2663,7 +2722,7 @@ def chat():
     live_info_query = ""
     live_info_articles = []
     live_info_sources = []
-    if is_live_news_query(user_message):
+    if is_live_news_query(user_message) and not school_context_requested:
         conversation.insert(
             -1,
             "Live/current-news request: use Google Search grounding and/or the live source context below. "
@@ -2679,7 +2738,7 @@ def chat():
         live_news_context = build_live_news_context(live_news_query, live_news_articles)
         if live_news_context:
             conversation.insert(-1, live_news_context)
-    elif should_use_real_time_search(user_message):
+    elif should_use_real_time_search(user_message) and not school_context_requested:
         conversation.insert(
             -1,
             "Current/live information request: use Google Search grounding when available. "
@@ -2731,7 +2790,7 @@ def chat():
                     "system_instruction": build_system_prompt(timezone_name, user_message, response_language),
                     "max_output_tokens": env_int("MAX_OUTPUT_TOKENS", 1800, 400, 4096),
                 }
-                if should_use_real_time_search(user_message):
+                if should_use_real_time_search(user_message) and not school_context_requested:
                     config_options["tools"] = [
                         types.Tool(google_search=types.GoogleSearch())
                     ]
@@ -2804,7 +2863,7 @@ def chat():
         )
         return jsonify({
             "reply": answer,
-            "sources": merge_sources(grounding.get("sources"), live_news_sources, live_info_sources),
+            "sources": merge_sources(school_sources, grounding.get("sources"), live_news_sources, live_info_sources),
             "searchHtml": grounding.get("searchHtml", ""),
             "memorySaved": saved_memory,
             "incomplete": incomplete,
