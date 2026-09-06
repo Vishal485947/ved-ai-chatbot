@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from urllib.parse import urlencode, urlparse
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -2269,6 +2270,52 @@ def robo_speech():
         return Response(audio, mimetype="audio/mpeg", headers={"Cache-Control": "no-store, private"})
     except Exception:
         return jsonify({"error": "Ved Robo speech is temporarily unavailable. Browser voice will be used instead."}), 503
+
+
+@app.post("/api/robo-transcribe")
+def robo_transcribe():
+    """Transcribe a short Ved Robo voice command through AssemblyAI."""
+    if not require_user_email():
+        return jsonify({"error": "Please log in first."}), 401
+    api_key = (os.getenv("ASSEMBLYAI_API_KEY") or "").strip()
+    if not api_key:
+        return jsonify({"error": "AssemblyAI is not configured yet. Add ASSEMBLYAI_API_KEY in Render."}), 503
+    audio_file = request.files.get("audio")
+    if not audio_file:
+        return jsonify({"error": "No voice recording was received."}), 400
+    audio = audio_file.read()
+    if not audio or len(audio) > 8 * 1024 * 1024:
+        return jsonify({"error": "Use a short voice command and try again."}), 400
+    headers = {"authorization": api_key}
+    try:
+        upload_request = Request("https://api.assemblyai.com/v2/upload", data=audio, headers={**headers, "content-type": audio_file.mimetype or "audio/webm"}, method="POST")
+        with urlopen(upload_request, timeout=30) as response:
+            upload_url = json.loads(response.read().decode("utf-8")).get("upload_url")
+        if not upload_url:
+            raise RuntimeError("AssemblyAI did not return an upload URL.")
+        transcript_request = Request("https://api.assemblyai.com/v2/transcript", data=json.dumps({"audio_url": upload_url, "language_detection": True, "punctuate": True, "format_text": True}).encode("utf-8"), headers={**headers, "content-type": "application/json"}, method="POST")
+        with urlopen(transcript_request, timeout=30) as response:
+            transcript = json.loads(response.read().decode("utf-8"))
+        transcript_id = transcript.get("id")
+        if not transcript_id:
+            raise RuntimeError("AssemblyAI did not start transcription.")
+        for _ in range(24):
+            time.sleep(1)
+            status_request = Request(f"https://api.assemblyai.com/v2/transcript/{transcript_id}", headers=headers)
+            with urlopen(status_request, timeout=20) as response:
+                transcript = json.loads(response.read().decode("utf-8"))
+            if transcript.get("status") == "completed":
+                text = (transcript.get("text") or "").strip()
+                if text:
+                    return jsonify({"transcript": text})
+                return jsonify({"error": "I could not understand that voice command."}), 422
+            if transcript.get("status") == "error":
+                return jsonify({"error": "AssemblyAI could not transcribe that recording. Please try again."}), 502
+        return jsonify({"error": "Voice transcription is taking too long. Please try again."}), 504
+    except (HTTPError, URLError, TimeoutError, ValueError, RuntimeError):
+        return jsonify({"error": "AssemblyAI voice transcription is temporarily unavailable. Please try again."}), 503
+    except Exception:
+        return jsonify({"error": "AssemblyAI voice transcription is temporarily unavailable. Please try again."}), 503
 
 
 @app.get("/healthz")
