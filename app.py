@@ -1175,11 +1175,12 @@ def strip_html(value):
 def school_site_context(query):
     """Fetch a small, cached, official-school context relevant to a reception question."""
     normalized = " ".join(re.findall(r"[a-z0-9]+", str(query or "").lower()))
-    selected = [SCHOOL_SITE_PAGES[0]]
-    for page in SCHOOL_SITE_PAGES[1:]:
-        if any(term in normalized for term in page[2]):
-            selected.append(page)
-    selected = selected[:3]
+    selected = [
+        page for page in SCHOOL_SITE_PAGES[1:]
+        if any(term in normalized for term in page[2])
+    ][:2]
+    if not selected:
+        selected = [SCHOOL_SITE_PAGES[0]]
 
     context_parts = []
     sources = []
@@ -1205,8 +1206,9 @@ def school_site_context(query):
         return "", []
     instructions = (
         "Official Salwan Public School, Trans Delhi Signature City source context follows. "
-        "Use it as the authority for school-related questions. Do not make up fees, dates, "
-        "admission availability, policies, phone numbers, staff details, or schedules. "
+        "Answer the visitor's exact question directly from this source. Do not give a general school profile, "
+        "foundation year, motto, mission, or vision unless the visitor specifically asks for it. "
+        "Do not make up fees, dates, admission availability, policies, phone numbers, staff details, or schedules. "
         "If the answer is not present or is ambiguous, say so and direct the visitor to school reception or the official website."
     )
     return instructions + chr(10) * 2 + (chr(10) * 2).join(context_parts), sources
