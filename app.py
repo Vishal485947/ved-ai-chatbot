@@ -2318,6 +2318,57 @@ def robo_transcribe():
         return jsonify({"error": "AssemblyAI voice transcription is temporarily unavailable. Please try again."}), 503
 
 
+@app.post("/api/robo-vision")
+def robo_vision():
+    """Identify the main non-person object in a Robo camera frame with Gemini."""
+    if not require_user_email():
+        return jsonify({"error": "Please log in first."}), 401
+    data = request.get_json(silent=True) or {}
+    image_data = str(data.get("image") or "").strip()
+    if not image_data:
+        return jsonify({"error": "No camera image was received."}), 400
+    try:
+        image_bytes = base64.b64decode(image_data, validate=True)
+    except (binascii.Error, ValueError):
+        return jsonify({"error": "The camera image was invalid."}), 400
+    if not image_bytes or len(image_bytes) > 5 * 1024 * 1024:
+        return jsonify({"error": "Use a clear, smaller camera image and try again."}), 400
+    load_dotenv(ENV_FILE, override=True)
+    api_key = (os.getenv("GEMINI_API_KEY") or "").strip()
+    if not api_key:
+        return jsonify({"error": "Ved vision is not configured yet."}), 503
+    try:
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=api_key)
+        prompt = ("Look at this camera image. Identify the most prominent non-person object, "
+                  "especially an item being held. Reply with only a short, natural description. "
+                  "If no object is clear, say that you cannot identify it clearly. Do not mention "
+                  "being an AI or describe the person.")
+        preferred_model = (os.getenv("GEMINI_MODEL") or "").strip()
+        candidates = list(dict.fromkeys(model for model in [preferred_model, *FALLBACK_GEMINI_MODELS] if model))
+        last_error = None
+        for model in candidates:
+            try:
+                response = client.models.generate_content(
+                    model=model,
+                    contents=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"), prompt],
+                    config=types.GenerateContentConfig(max_output_tokens=80, temperature=0.2),
+                )
+                answer = (response.text or "").strip()
+                if answer:
+                    return jsonify({"answer": answer[:500]})
+            except Exception as exc:
+                last_error = exc
+                error_text = str(exc).lower()
+                if "not_found" in error_text or "not found" in error_text or "404" in error_text or is_gemini_unavailable_error(error_text):
+                    continue
+                raise
+        raise RuntimeError("No vision model was available.") from last_error
+    except Exception:
+        return jsonify({"error": "Ved could not inspect the camera image right now. Please try again."}), 503
+
+
 @app.get("/healthz")
 def healthz():
     return jsonify({"status": "ok", "app": "Ved"})
