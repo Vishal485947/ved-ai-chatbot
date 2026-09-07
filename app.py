@@ -8,7 +8,7 @@ import re
 import sqlite3
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from urllib.parse import urlencode, urlparse
@@ -2293,6 +2293,65 @@ def robo_home():
     if not session.get("user"):
         return redirect(url_for("login"))
     return render_template("robo.html", user=session.get("user"))
+
+
+@app.post("/api/robo-live-token")
+def robo_live_token():
+    """Provision one short-lived, constrained Gemini Live token for the signed-in Robo user."""
+    if not require_user_email():
+        return jsonify({"error": "Please log in first."}), 401
+    load_dotenv(ENV_FILE, override=True)
+    api_key = (os.getenv("GEMINI_API_KEY") or "").strip()
+    if not api_key:
+        return jsonify({"error": "Gemini Live is not configured yet."}), 503
+
+    model = (os.getenv("GEMINI_LIVE_MODEL") or "gemini-3.1-flash-live-preview").strip()
+    if not re.fullmatch(r"[A-Za-z0-9._-]+", model):
+        return jsonify({"error": "Gemini Live model configuration is invalid."}), 500
+    now = datetime.now(timezone.utc)
+    payload = {
+        "uses": 1,
+        "expireTime": (now + timedelta(minutes=20)).isoformat().replace("+00:00", "Z"),
+        "newSessionExpireTime": (now + timedelta(minutes=1)).isoformat().replace("+00:00", "Z"),
+        "liveConnectConstraints": {
+            "model": f"models/{model}",
+            "config": {"responseModalities": ["AUDIO"]},
+        },
+    }
+    try:
+        token_request = Request(
+            "https://generativelanguage.googleapis.com/v1beta/auth_tokens",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"x-goog-api-key": api_key, "content-type": "application/json"},
+            method="POST",
+        )
+        with urlopen(token_request, timeout=20) as response:
+            token = json.loads(response.read().decode("utf-8")).get("name")
+        if not token:
+            raise RuntimeError("Gemini did not return a Live token.")
+        return jsonify({
+            "token": token,
+            "model": model,
+            "voice": (os.getenv("GEMINI_LIVE_VOICE") or "Aoede").strip(),
+        })
+    except Exception:
+        return jsonify({"error": "Gemini Live is temporarily unavailable. Ved will use backup voice."}), 503
+
+
+@app.post("/api/robo-school-context")
+def robo_school_context():
+    """Return only public official-school context for a Gemini Live tool call."""
+    if not require_user_email():
+        return jsonify({"error": "Please log in first."}), 401
+    data = request.get_json(silent=True) or {}
+    question = compact_text(data.get("question"), 500)
+    if not question:
+        return jsonify({"context": "No school question was provided.", "sources": []})
+    context, sources = school_site_context(question)
+    return jsonify({
+        "context": compact_text(context, 9000) if context else "No relevant official school information was available.",
+        "sources": sources,
+    })
 
 
 @app.post("/api/robo-speech")
