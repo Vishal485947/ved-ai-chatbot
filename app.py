@@ -2329,10 +2329,13 @@ def robo_live_token():
             token = json.loads(response.read().decode("utf-8")).get("name")
         if not token:
             raise RuntimeError("Gemini did not return a Live token.")
+        voice = (os.getenv("GEMINI_LIVE_VOICE") or "Kore").strip()
+        if voice.lower() in {"", "aoede"}:
+            voice = "Kore"
         return jsonify({
             "token": token,
             "model": model,
-            "voice": (os.getenv("GEMINI_LIVE_VOICE") or "Aoede").strip(),
+            "voice": voice,
         })
     except Exception:
         return jsonify({"error": "Gemini Live is temporarily unavailable. Ved will use backup voice."}), 503
@@ -2369,8 +2372,8 @@ def robo_speech():
         locale = "en-US"
 
     voices = {
-        "en-US": "en-US-GuyNeural", "en-GB": "en-GB-RyanNeural",
-        "hi-IN": "hi-IN-MadhurNeural", "bn-IN": "bn-IN-BashkarNeural", "gu-IN": "gu-IN-NiranjanNeural",
+        "en-US": "en-US-AvaNeural", "en-IN": "en-IN-NeerjaNeural", "en-GB": "en-GB-SoniaNeural",
+        "hi-IN": "hi-IN-SwaraNeural", "bn-IN": "bn-IN-BashkarNeural", "gu-IN": "gu-IN-NiranjanNeural",
         "kn-IN": "kn-IN-GaganNeural", "ml-IN": "ml-IN-MidhunNeural", "mr-IN": "mr-IN-ManoharNeural",
         "pa-IN": "pa-IN-GurpreetNeural", "ta-IN": "ta-IN-ValluvarNeural", "te-IN": "te-IN-MohanNeural",
         "ur-PK": "ur-PK-AsadNeural", "ar-SA": "ar-SA-HamedNeural", "zh-CN": "zh-CN-YunxiNeural",
@@ -2378,7 +2381,7 @@ def robo_speech():
         "ja-JP": "ja-JP-KeitaNeural", "ko-KR": "ko-KR-InJoonNeural", "pt-BR": "pt-BR-AntonioNeural",
         "ru-RU": "ru-RU-DmitryNeural", "tr-TR": "tr-TR-AhmetNeural", "vi-VN": "vi-VN-NamMinhNeural",
     }
-    voice = voices.get(locale, "en-US-GuyNeural")
+    voice = voices.get(locale, "en-IN-NeerjaNeural")
 
     async def generate_audio():
         speech = edge_tts.Communicate(text, voice=voice, rate="+12%")
