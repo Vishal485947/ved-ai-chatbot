@@ -178,3 +178,9 @@ https://ved-ai-chatbot.onrender.com
 
 Use a paid always-on instance if you want it to stay awake 24/7. Free services can
 spin down after inactivity.
+
+## Local reception mode
+
+For an offline, no-provider-limit reception installation, run Ved on the same Windows PC as Ollama. In its private .env, set VED_LOCAL_AI=true, OLLAMA_BASE_URL=http://127.0.0.1:11434, and OLLAMA_MODEL=gemma3:4b.
+
+Start Ollama, then start Ved locally. Do not set VED_LOCAL_AI=true on Render: Render cannot access the reception PC''s local model. The local model can answer questions and inspect a Robo camera image; browser or AssemblyAI speech remains available while local speech models are configured.

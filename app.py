@@ -2446,6 +2446,44 @@ def robo_transcribe():
         return jsonify({"error": "AssemblyAI voice transcription is temporarily unavailable. Please try again."}), 503
 
 
+def local_ollama_enabled():
+    return (os.getenv("VED_LOCAL_AI") or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def ollama_api(path, payload, timeout=90):
+    """Call only the loopback Ollama service used by the local reception installation."""
+    base_url = (os.getenv("OLLAMA_BASE_URL") or "http://127.0.0.1:11434").rstrip("/")
+    parsed = urlparse(base_url)
+    if parsed.scheme not in {"http", "https"} or parsed.hostname not in {"127.0.0.1", "localhost", "::1"}:
+        raise RuntimeError("OLLAMA_BASE_URL must point to this computer.")
+    request = Request(
+        f"{base_url}{path}",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"content-type": "application/json"},
+        method="POST",
+    )
+    with urlopen(request, timeout=timeout) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def local_ollama_reply(conversation, timezone_name, user_message, response_language, robo_mode=False):
+    system_prompt = build_system_prompt(timezone_name, user_message, response_language)
+    if robo_mode:
+        system_prompt += " You are in reception mode: answer in no more than three short sentences and 90 words."
+    result = ollama_api("/api/chat", {
+        "model": (os.getenv("OLLAMA_MODEL") or "gemma3:4b").strip(),
+        "stream": False,
+        "options": {"temperature": 0.35, "num_predict": 220 if robo_mode else 900},
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": "\n".join(conversation)},
+        ],
+    })
+    answer = compact_text((result.get("message") or {}).get("content"), 5000)
+    if not answer:
+        raise RuntimeError("The local model returned no reply.")
+    return compact_robo_reply(answer) if robo_mode else answer
+
 @app.post("/api/robo-vision")
 def robo_vision():
     """Identify the main non-person object in a Robo camera frame with Gemini."""
@@ -2462,6 +2500,22 @@ def robo_vision():
     if not image_bytes or len(image_bytes) > 5 * 1024 * 1024:
         return jsonify({"error": "Use a clear, smaller camera image and try again."}), 400
     load_dotenv(ENV_FILE, override=True)
+    if local_ollama_enabled():
+        try:
+            prompt = ("Look at this camera image. Identify the main non-person object, especially an item being held. "
+                      "Reply with only a short, natural description. If no object is clear, say so.")
+            result = ollama_api("/api/chat", {
+                "model": (os.getenv("OLLAMA_MODEL") or "gemma3:4b").strip(),
+                "stream": False,
+                "options": {"temperature": 0.15, "num_predict": 80},
+                "messages": [{"role": "user", "content": prompt, "images": [image_data]}],
+            })
+            answer = compact_text((result.get("message") or {}).get("content"), 500)
+            if not answer:
+                raise RuntimeError("The local vision model returned no answer.")
+            return jsonify({"answer": answer})
+        except Exception:
+            return jsonify({"error": "Local Ved vision is unavailable. Make sure Ollama is running and the Gemma model has finished downloading."}), 503
     api_key = (os.getenv("GEMINI_API_KEY") or "").strip()
     if not api_key:
         return jsonify({"error": "Ved vision is not configured yet."}), 503
@@ -2692,7 +2746,8 @@ def chat():
     load_dotenv(ENV_FILE, override=True)
     api_key = (os.getenv("GEMINI_API_KEY") or "").strip()
 
-    if not api_key or api_key == "your_gemini_api_key_here":
+    use_local_ai = local_ollama_enabled()
+    if not use_local_ai and (not api_key or api_key == "your_gemini_api_key_here"):
         return jsonify({
             "error": f"Ved needs a Gemini API key. Add GEMINI_API_KEY=your_key_here to {ENV_FILE}, then send a new message."
         }), 500
@@ -2834,6 +2889,20 @@ def chat():
         if live_info_context:
             conversation.insert(-1, live_info_context)
 
+    if use_local_ai:
+        if attachments:
+            return jsonify({"error": "Local Ved supports camera vision in Robo mode. File attachments still need the cloud mode."}), 400
+        try:
+            answer = local_ollama_reply(conversation, timezone_name, user_message, response_language, robo_mode)
+            return jsonify({
+                "reply": answer,
+                "sources": school_sources,
+                "searchHtml": "",
+                "memorySaved": saved_memory,
+                "incomplete": False,
+            })
+        except Exception:
+            return jsonify({"error": "Local Ved is unavailable. Start Ollama on this computer and verify that the selected model has downloaded."}), 503
     try:
         try:
             from google import genai
