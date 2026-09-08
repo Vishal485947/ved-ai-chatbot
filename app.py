@@ -2278,6 +2278,8 @@ def add_no_cache_headers(response):
 
 @app.get("/")
 def home():
+    if local_ollama_enabled():
+        return redirect(url_for("robo_home"))
     if session.get("user"):
         return render_template("choose.html", user=session.get("user"))
     return render_template("index.html", user=session.get("user"))
@@ -2285,15 +2287,21 @@ def home():
 
 @app.get("/ved")
 def ved_home():
+    if local_ollama_enabled():
+        return redirect(url_for("robo_home"))
     return render_template("index.html", user=session.get("user"))
 
 
 @app.get("/robo")
 def robo_home():
+    if local_ollama_enabled() and not session.get("user"):
+        session["user"] = {
+            "email": "local-robo@ved.local",
+            "name": "Reception visitor",
+        }
     if not session.get("user"):
         return redirect(url_for("login"))
-    return render_template("robo.html", user=session.get("user"))
-
+    return render_template("robo.html", user=session.get("user"), local_mode=local_ollama_enabled())
 
 @app.post("/api/robo-live-token")
 def robo_live_token():
