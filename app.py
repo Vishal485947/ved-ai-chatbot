@@ -2346,7 +2346,7 @@ def robo_live_token():
             "voice": voice,
         })
     except Exception:
-        return jsonify({"error": "Gemini Live is temporarily unavailable. Ved will use backup voice."}), 503
+        return jsonify({"error": "Voice connection is unavailable. Please tap Ved and speak again."}), 503
 
 
 @app.post("/api/robo-school-context")
@@ -2458,7 +2458,7 @@ def local_ollama_enabled():
     return (os.getenv("VED_LOCAL_AI") or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
-def ollama_api(path, payload, timeout=90):
+def ollama_api(path, payload, timeout=180):
     """Call only the loopback Ollama service used by the local reception installation."""
     base_url = (os.getenv("OLLAMA_BASE_URL") or "http://127.0.0.1:11434").rstrip("/")
     parsed = urlparse(base_url)
@@ -2475,23 +2475,30 @@ def ollama_api(path, payload, timeout=90):
 
 
 def local_ollama_reply(conversation, timezone_name, user_message, response_language, robo_mode=False):
-    system_prompt = build_system_prompt(timezone_name, user_message, response_language)
+    system_prompt = (
+        "You are Ved, a helpful school reception assistant for Salwan Public School. "
+        "Answer naturally in the visitor's language. Be accurate and never invent school facts."
+    )
     if robo_mode:
-        system_prompt += " You are in reception mode: answer in no more than three short sentences and 90 words."
+        system_prompt += " Keep the answer under three short sentences and 70 words."
     result = ollama_api("/api/chat", {
         "model": (os.getenv("OLLAMA_MODEL") or "gemma3:4b").strip(),
         "stream": False,
-        "options": {"temperature": 0.35, "num_predict": 220 if robo_mode else 900},
+        "keep_alive": "30m",
+        "options": {
+            "temperature": 0.25,
+            "num_predict": 96 if robo_mode else 420,
+            "num_ctx": 2048,
+        },
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": "\n".join(conversation)},
+            {"role": "user", "content": "\n".join(conversation[-6:])},
         ],
     })
     answer = compact_text((result.get("message") or {}).get("content"), 5000)
     if not answer:
         raise RuntimeError("The local model returned no reply.")
     return compact_robo_reply(answer) if robo_mode else answer
-
 @app.post("/api/robo-vision")
 def robo_vision():
     """Identify the main non-person object in a Robo camera frame with Gemini."""
